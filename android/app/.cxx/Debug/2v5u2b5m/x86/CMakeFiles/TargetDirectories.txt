@@ -1,0 +1,2 @@
+D:/Caloer_app/android/app/.cxx/Debug/2v5u2b5m/x86/CMakeFiles/edit_cache.dir
+D:/Caloer_app/android/app/.cxx/Debug/2v5u2b5m/x86/CMakeFiles/rebuild_cache.dir
