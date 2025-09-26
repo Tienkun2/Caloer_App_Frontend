@@ -26,7 +26,7 @@ void main() {
       ),
       fontFamily: 'Roboto',
       scaffoldBackgroundColor: Colors.grey[50],
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         clipBehavior: Clip.antiAlias,
