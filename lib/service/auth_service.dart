@@ -35,7 +35,23 @@ class AuthService {
       }
     } catch (e) {
       print('❌ Lỗi đăng nhập: $e');
-      return {'success': false, 'message': 'Đã xảy ra lỗi khi kết nối đến server'};
+      
+      // Phân tích loại lỗi để đưa ra thông báo phù hợp
+      String errorMessage;
+      if (e.toString().contains('Failed to fetch') || e.toString().contains('Connection refused')) {
+        errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra:\n'
+            '• Server backend có đang chạy không?\n'
+            '• Kết nối mạng có ổn định không?\n'
+            '• Địa chỉ server: $BASE_URL';
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = 'Kết nối bị timeout. Server có thể đang quá tải hoặc mạng chậm.';
+      } else if (e.toString().contains('SocketException')) {
+        errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.';
+      } else {
+        errorMessage = 'Đã xảy ra lỗi khi kết nối đến server: ${e.toString()}';
+      }
+      
+      return {'success': false, 'message': errorMessage};
     }
   }
 
@@ -62,7 +78,23 @@ class AuthService {
       }
     } catch (e) {
       print('❌ Lỗi đăng ký: $e');
-      return {'success': false, 'message': 'Đã xảy ra lỗi khi kết nối đến server'};
+      
+      // Phân tích loại lỗi để đưa ra thông báo phù hợp
+      String errorMessage;
+      if (e.toString().contains('Failed to fetch') || e.toString().contains('Connection refused')) {
+        errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra:\n'
+            '• Server backend có đang chạy không?\n'
+            '• Kết nối mạng có ổn định không?\n'
+            '• Địa chỉ server: $BASE_URL';
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = 'Kết nối bị timeout. Server có thể đang quá tải hoặc mạng chậm.';
+      } else if (e.toString().contains('SocketException')) {
+        errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.';
+      } else {
+        errorMessage = 'Đã xảy ra lỗi khi kết nối đến server: ${e.toString()}';
+      }
+      
+      return {'success': false, 'message': errorMessage};
     }
   }
 }

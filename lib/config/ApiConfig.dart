@@ -17,7 +17,7 @@ class ApiConfig {
   // Iphone
   //String get baseUrl => "http://192.168.1.21:8080";
 
-  String get baseUrl => "http://172.20.10.11:8080";
+  String get baseUrl => "http://172.16.11.3:8080";
 
   //String get baseUrl => "http://192.168.100.127:8080";
 
