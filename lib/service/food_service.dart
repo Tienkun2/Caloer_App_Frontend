@@ -5,6 +5,7 @@ import 'package:caloer_app/config/ApiConfig.dart';
 
 class FoodService {
   static final String BASE_URL = ApiConfig().baseUrl;
+  static final String BASE_URL_AI = ApiConfig().baseUrlAi;
 
   Future<String?> _getToken() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -247,6 +248,49 @@ class FoodService {
     } catch (e) {
       print("🔴 Lỗi fetchMealSuggestions: $e");
       throw Exception("Lỗi fetchMealSuggestions: $e");
+    }
+  }
+
+  // API predict mới
+  Future<Map<String, dynamic>> predictFood(String content) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$BASE_URL_AI/predict'),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({"content": content}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        if (data["success"] == true && data["result"]["success"] == true) {
+          final result = data["result"];
+          final nutrition = result["nutrition_info"];
+          
+          return {
+            "id": DateTime.now().millisecondsSinceEpoch,
+            "name": result["food"] ?? "Unknown Food",
+            "calories": (result["calories"] ?? 0).toDouble(),
+            "protein": (nutrition["protein"] ?? 0).toDouble(),
+            "fat": (nutrition["fat"] ?? 0).toDouble(),
+            "carbs": (nutrition["carbs"] ?? 0).toDouble(),
+            "fiber": (nutrition["fiber"] ?? 0).toDouble(),
+            "servingAmount": (result["quantity"] ?? 100).toDouble(),
+            "servingSize": "${result["quantity"] ?? 100}${result["unit"] ?? "g"}",
+            "createdAt": DateTime.now().toIso8601String(),
+            "updatedAt": DateTime.now().toIso8601String(),
+            "isFromPredict": true,
+          };
+        } else {
+          throw Exception("Predict API trả về lỗi: ${data["result"]["message"] ?? "Unknown error"}");
+        }
+      } else {
+        throw Exception("Lỗi HTTP ${response.statusCode}: ${response.body}");
+      }
+    } catch (e) {
+      throw Exception("Lỗi predictFood: $e");
     }
   }
 }

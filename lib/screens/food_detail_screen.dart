@@ -6,11 +6,13 @@ class FoodDetailScreen extends StatefulWidget {
   final int foodId;
   final DateTime selectedDate;
   final String mealType;
+  final Map<String, dynamic>? foodData; // Thêm field để truyền data từ predict
 
   FoodDetailScreen({
     required this.foodId,
     required this.selectedDate,
     required this.mealType,
+    this.foodData, // Optional - nếu có thì dùng data này thay vì gọi API
   });
 
   @override
@@ -21,11 +23,22 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
   final FoodService foodService = FoodService();
   final TextEditingController _amountController = TextEditingController();
   final String _selectedMeal = 'Bữa sáng'; // Default selected meal
+  
+  // Thêm state để lưu trữ dữ liệu dinh dưỡng gốc
+  Map<String, dynamic>? _foodData;
+  double _originalCalories = 0.0;
+  double _originalProtein = 0.0;
+  double _originalCarbs = 0.0;
+  double _originalFat = 0.0;
+  double _originalServingAmount = 100.0;
+  bool _isDataLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _amountController.text = '100'; // Default serving amount
+    _amountController.addListener(_onAmountChanged); // Thêm listener
+    _loadFoodData(); // Load data một lần duy nhất
   }
 
   @override
@@ -34,37 +47,73 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     super.dispose();
   }
 
+  // Method để load data food - từ predict hoặc từ API
+  Future<void> _loadFoodData() async {
+    try {
+      // Nếu có data từ predict API, sử dụng luôn
+      if (widget.foodData != null) {
+        _foodData = widget.foodData!;
+      } else {
+        // Nếu không có, gọi API để lấy data từ database
+        _foodData = await foodService.fetchFoodDetail(widget.foodId);
+      }
+      
+      // Lưu trữ dữ liệu gốc
+      _originalCalories = (_foodData!['calories'] ?? 0.0) is num ? (_foodData!['calories'] as num).toDouble() : 0.0;
+      _originalProtein = (_foodData!['protein'] ?? 0.0) is num ? (_foodData!['protein'] as num).toDouble() : 0.0;
+      _originalCarbs = (_foodData!['carbs'] ?? 0.0) is num ? (_foodData!['carbs'] as num).toDouble() : 0.0;
+      _originalFat = (_foodData!['fat'] ?? 0.0) is num ? (_foodData!['fat'] as num).toDouble() : 0.0;
+      _originalServingAmount = (_foodData!['servingAmount'] ?? 100.0) is num ? (_foodData!['servingAmount'] as num).toDouble() : 100.0;
+      
+      setState(() {
+        _isDataLoaded = true;
+      });
+    } catch (e) {
+      print("Lỗi load food data: $e");
+    }
+  }
+
+  // Method để xử lý thay đổi số gram
+  void _onAmountChanged() {
+    setState(() {
+      // UI sẽ được cập nhật tự động khi setState được gọi
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: FutureBuilder(
-        future: foodService.fetchFoodDetail(widget.foodId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError || snapshot.data == null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 60, color: Colors.red),
-                  SizedBox(height: 16),
-                  Text(
-                    "Lỗi khi tải dữ liệu",
-                    style: TextStyle(fontSize: 18, color: Colors.red[700]),
-                  ),
-                ],
-              ),
-            );
-          } else {
-            final food = snapshot.data as Map<String, dynamic>;
-            // Safely parse numeric fields to double with fallback to 0.0
-            final double calories = (food['calories'] ?? 0.0) is num ? (food['calories'] as num).toDouble() : 0.0;
-            final double protein = (food['protein'] ?? 0.0) is num ? (food['protein'] as num).toDouble() : 0.0;
-            final double carbs = (food['carbs'] ?? 0.0) is num ? (food['carbs'] as num).toDouble() : 0.0;
-            final double fat = (food['fat'] ?? 0.0) is num ? (food['fat'] as num).toDouble() : 0.0;
-            final double servingAmount = (food['servingAmount'] ?? 100.0) is num ? (food['servingAmount'] as num).toDouble() : 100.0;
+      body: _isDataLoaded ? _buildContent() : Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  Widget _buildContent() {
+    if (_foodData == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 60, color: Colors.red),
+            SizedBox(height: 16),
+            Text(
+              "Lỗi khi tải dữ liệu",
+              style: TextStyle(fontSize: 18, color: Colors.red[700]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Lấy số gram hiện tại từ TextField
+    double currentAmount = double.tryParse(_amountController.text) ?? 100.0;
+    
+    // Tính toán lại các giá trị dinh dưỡng dựa trên số gram hiện tại
+    final double calories = _calculateValue(_originalCalories, _originalServingAmount, currentAmount);
+    final double protein = _calculateValue(_originalProtein, _originalServingAmount, currentAmount);
+    final double carbs = _calculateValue(_originalCarbs, _originalServingAmount, currentAmount);
+    final double fat = _calculateValue(_originalFat, _originalServingAmount, currentAmount);
+    final double servingAmount = currentAmount; // Sử dụng số gram hiện tại
 
             Color headerColor = Colors.primaries[widget.foodId % Colors.primaries.length].shade50;
             Color accentColor = Colors.primaries[widget.foodId % Colors.primaries.length];
@@ -275,10 +324,10 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                                         children: [
-                                          _buildNutrientInfo("Calo", "${_calculateValue(calories, servingAmount, _amountController.text)} kcal"),
-                                          _buildNutrientInfo("Protein", "${_calculateValue(protein, servingAmount, _amountController.text)}g"),
-                                          _buildNutrientInfo("Carbs", "${_calculateValue(carbs, servingAmount, _amountController.text)}g"),
-                                          _buildNutrientInfo("Fat", "${_calculateValue(fat, servingAmount, _amountController.text)}g"),
+                                          _buildNutrientInfo("Calo", "${_calculateValue(_originalCalories, _originalServingAmount, currentAmount)} kcal"),
+                                          _buildNutrientInfo("Protein", "${_calculateValue(_originalProtein, _originalServingAmount, currentAmount)}g"),
+                                          _buildNutrientInfo("Carbs", "${_calculateValue(_originalCarbs, _originalServingAmount, currentAmount)}g"),
+                                          _buildNutrientInfo("Fat", "${_calculateValue(_originalFat, _originalServingAmount, currentAmount)}g"),
                                         ],
                                       ),
                                     ],
@@ -360,16 +409,11 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                 ),
               ],
             );
-          }
-        },
-      ),
-    );
   }
 
   // Helper method to calculate nutrition values based on entered amount
-  double _calculateValue(double originalValue, double servingAmount, String enteredAmount) {
-    double amount = double.tryParse(enteredAmount) ?? 0.0;
-    double ratio = amount / servingAmount;
+  double _calculateValue(double originalValue, double servingAmount, double enteredAmount) {
+    double ratio = enteredAmount / servingAmount;
     return double.parse((originalValue * ratio).toStringAsFixed(1));
   }
 

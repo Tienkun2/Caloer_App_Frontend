@@ -5,6 +5,7 @@ import 'package:caloer_app/config/ApiConfig.dart';
 
 class UserService {
   static final String BASE_URL = ApiConfig().baseUrl;
+  static final String BASE_URL_AI = ApiConfig().baseUrlAi;
 
   Future<bool> isLoggedIn() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -358,6 +359,31 @@ class UserService {
     } catch (e) {
       print("⚠️ Lỗi kết nối API: $e");
       return false;
+    }
+  }
+
+  // Chuẩn đoán tình trạng sức khỏe
+  Future<Map<String, dynamic>?> performHealthDiagnosis(Map<String, dynamic> healthData) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$BASE_URL_AI/obesity/predict'),
+        headers: {
+          "Content-Type": "application/json",
+          "accept": "application/json",
+        },
+        body: jsonEncode(healthData),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data;
+      } else {
+        print("❌ Lỗi chuẩn đoán sức khỏe: ${response.statusCode} - ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("❌ Lỗi chuẩn đoán sức khỏe: $e");
+      return null;
     }
   }
 }

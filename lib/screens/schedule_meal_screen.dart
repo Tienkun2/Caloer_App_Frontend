@@ -41,6 +41,20 @@ class _ScheduleMealsScreenState extends State<ScheduleMealsScreen> {
     super.dispose();
   }
 
+  // Xử lý query để tự động thêm "100g" nếu cần
+  String _processQuery(String query) {
+    // Kiểm tra xem query đã có số và đơn vị chưa
+    RegExp hasNumberAndUnit = RegExp(r'\d+\s*(g|kg|ml|l|gram|kilogram|liter|litre)', caseSensitive: false);
+    
+    if (hasNumberAndUnit.hasMatch(query)) {
+      // Nếu đã có số và đơn vị, giữ nguyên
+      return query;
+    } else {
+      // Nếu chưa có, thêm "100g" vào đầu
+      return "100g $query";
+    }
+  }
+
   Future<void> _initializeSpeech() async {
     bool available = await _speech.initialize(
       onStatus: (status) {
@@ -107,6 +121,7 @@ class _ScheduleMealsScreenState extends State<ScheduleMealsScreen> {
 
   Future<void> _searchFoods() async {
     String query = searchController.text.trim();
+    
     if (query.isEmpty) {
       setState(() {
         filteredItems = List.from(mealItems);
@@ -114,37 +129,49 @@ class _ScheduleMealsScreenState extends State<ScheduleMealsScreen> {
       return;
     }
 
+    // Tự động thêm "100g" nếu query không chứa số và đơn vị
+    String processedQuery = _processQuery(query);
+
     setState(() {
       _isSearching = true;
     });
 
     try {
-      List<Map<String, dynamic>> searchResults = await foodService.searchFoods(query);
+      Map<String, dynamic> predictResult = await foodService.predictFood(processedQuery);
+      
       setState(() {
-        filteredItems = searchResults.map((food) {
-          return {
-            "id": food["id"] ?? 0,
-            "name": food["name"] ?? "Unknown Food",
-            "calories": food["calories"] is num ? (food["calories"] as num).toDouble() : 0.0,
-            "protein": food["protein"] is num ? (food["protein"] as num).toDouble() : 0.0,
-            "fat": food["fat"] is num ? (food["fat"] as num).toDouble() : 0.0,
-            "carbs": food["carbs"] is num ? (food["carbs"] as num).toDouble() : 0.0,
-            "fiber": food["fiber"] is num ? (food["fiber"] as num).toDouble() : 0.0,
-            "servingAmount": 100.0,
-            "servingSize": food["servingSize"] ?? "100g",
-            "createdAt": food["createdAt"] ?? DateTime.now().toIso8601String(),
-            "updatedAt": food["updatedAt"] ?? DateTime.now().toIso8601String(),
-          };
-        }).toList();
+        filteredItems = [predictResult];
         _isSearching = false;
       });
-    } catch (e) {
+      
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text('✅ Đã phân tích món ăn từ AI'),
+      //     backgroundColor: Colors.green,
+      //     duration: Duration(seconds: 2),
+      //   ),
+      // );
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ Tìm thấy thông tin dinh dưỡng'),
+          backgroundColor: Colors.blue,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      
+    } catch (predictError) {
       setState(() {
         _isSearching = false;
         filteredItems = [];
       });
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không thể tìm kiếm món ăn'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('❌ Lỗi AI predict: ${predictError.toString()}'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
       );
     }
   }
@@ -157,6 +184,7 @@ class _ScheduleMealsScreenState extends State<ScheduleMealsScreen> {
           foodId: food['id'],
           selectedDate: widget.selectedDate,
           mealType: widget.mealType,
+          foodData: food, // Truyền data food để sử dụng luôn thay vì gọi API
         ),
       ),
     );
@@ -223,7 +251,7 @@ class _ScheduleMealsScreenState extends State<ScheduleMealsScreen> {
                           controller: searchController,
                           onSubmitted: (_) => _searchFoods(),
                           decoration: InputDecoration(
-                            hintText: 'Tìm kiếm món ăn (VD: Bánh bò)',
+                            hintText: 'Nhập món ăn để AI phân tích (VD: 100g thịt cá mập)',
                             hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
                             prefixIcon: Icon(Icons.search, color: Theme.of(context).primaryColor),
                             filled: true,

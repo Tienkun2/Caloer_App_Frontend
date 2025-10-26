@@ -88,7 +88,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Trợ lý ảo sức khỏe',
+                  'Trợ lý dinh dưỡng AI',
                   style: TextStyle(
                     color: Colors.black87,
                     fontWeight: FontWeight.bold,
@@ -325,7 +325,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ),
           SizedBox(height: 20),
           Text(
-            'Trợ lý sức khỏe cá nhân',
+            'Trợ lý dinh dưỡng AI',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -336,7 +336,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
-              'Xin chào! Tôi là trợ lý ảo sức khỏe. Hãy hỏi tôi về dinh dưỡng, tập luyện hoặc bất kỳ mục tiêu sức khỏe nào của bạn.',
+              'Xin chào! Tôi là trợ lý dinh dưỡng AI. Hãy hỏi tôi về thực đơn, chế độ ăn uống hoặc bất kỳ mục tiêu dinh dưỡng nào của bạn.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey.shade600,
@@ -353,10 +353,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   Widget _buildSuggestionChips() {
     List<String> suggestions = [
+      "Cho tôi thực đơn cho người gầy",
+      "Thực đơn giảm cân trong 1 tuần",
       "Chế độ ăn cho người tập gym",
-      "Cách giảm cân hiệu quả",
-      "Chế độ tập luyện cho người mới",
-      "Chế độ ăn giàu protein",
+      "Thực đơn tăng cơ bắp",
     ];
 
     return Wrap(

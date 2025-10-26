@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../service/user_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:math' as math;
+import '../config/ApiConfig.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -23,6 +24,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'thigh': TextEditingController(),
     'firstWeight': TextEditingController(),
   };
+
+  // Controllers cho modal chuẩn đoán sức khỏe
+  final Map<String, TextEditingController> healthControllers = {
+    'Age': TextEditingController(),
+    'Height': TextEditingController(),
+    'Weight': TextEditingController(),
+    'CH2O': TextEditingController(),
+    'FAF': TextEditingController(),
+    'FCVC': TextEditingController(),
+    'NCP': TextEditingController(),
+    'TUE': TextEditingController(),
+  };
+
+  // Dropdown values cho modal chuẩn đoán
+  String selectedGender = "";
+  String selectedCAEC = "";
+  String selectedCALC = "";
+  String selectedFAVC = "";
+  String selectedSCC = "";
+  String selectedSMOKE = "";
+  String selectedMTRANS = "";
+  String selectedFamilyHistory = "";
+  
+  // Form key cho validation
+  final GlobalKey<FormState> _healthFormKey = GlobalKey<FormState>();
   String email = "", gender = "Nam", goal = "Duy trì cân nặng", state = "", name = "";
   double bmr = 0, tdee = 0, bmi = 0, caloDeficit = 0, firstWeight = 0, dailyCalories = 0;
   String? createdate;
@@ -40,6 +66,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     });
     _loadUserData();
+    _initializeHealthControllers();
+  }
+
+  void _initializeHealthControllers() {
+    // Khởi tạo giá trị mặc định cho health controllers
+    healthControllers.forEach((key, controller) {
+      controller.addListener(() {
+        if (controller.selection.baseOffset == 0 && controller.text.isNotEmpty) {
+          controller.clear();
+        }
+      });
+    });
   }
 
   bool _isProfileComplete() {
@@ -447,6 +485,802 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _showHealthDiagnosisModal() {
+    // Điền dữ liệu từ profile nếu có
+    _populateHealthDataFromProfile();
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header với gradient
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue.shade400, Colors.blue.shade600],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  padding: EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.health_and_safety, color: Colors.white, size: 28),
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Chuẩn đoán sức khỏe", 
+                                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                            Text("Phân tích tình trạng sức khỏe hiện tại", 
+                                 style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.9))),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(24),
+                    child: Form(
+                      key: _healthFormKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Thông tin cơ bản
+                          _buildSectionTitle("Thông tin cơ bản", Icons.person),
+                          SizedBox(height: 20),
+                          Row(
+                            children: [
+                              Expanded(child: _buildHealthTextField(healthControllers['Age']!, "Tuổi", Icons.calendar_today, 
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Tuổi không được để trống';
+                                    }
+                                    if (int.tryParse(value) == null || int.parse(value) <= 0) {
+                                      return 'Tuổi phải là số dương';
+                                    }
+                                    return null;
+                                  })),
+                              SizedBox(width: 16),
+                              Expanded(child: _buildHealthTextField(healthControllers['Height']!, "Chiều cao (m)", Icons.height,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Chiều cao không được để trống';
+                                    }
+                                    if (double.tryParse(value) == null || double.parse(value) <= 0) {
+                                      return 'Chiều cao phải là số dương';
+                                    }
+                                    return null;
+                                  })),
+                            ],
+                          ),
+                          SizedBox(height: 20),
+                          Row(
+                            children: [
+                              Expanded(child: _buildHealthTextField(healthControllers['Weight']!, "Cân nặng (kg)", Icons.monitor_weight,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Cân nặng không được để trống';
+                                    }
+                                    if (double.tryParse(value) == null || double.parse(value) <= 0) {
+                                      return 'Cân nặng phải là số dương';
+                                    }
+                                    return null;
+                                  })),
+                              SizedBox(width: 16),
+                              Expanded(child: _buildHealthDropdown("Giới tính", selectedGender, 
+                                  ["Nam", "Nữ"], (value) {
+                                setModalState(() => selectedGender = value ?? "");
+                              }, validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Vui lòng chọn giới tính';
+                                }
+                                return null;
+                              })),
+                            ],
+                          ),
+                          
+                          SizedBox(height: 30),
+                          
+                          // Thông tin dinh dưỡng
+                          _buildSectionTitle("Thông tin dinh dưỡng", Icons.restaurant),
+                          SizedBox(height: 20),
+                          _buildHealthTextField(healthControllers['CH2O']!, "Lượng nước uống (L/ngày)", Icons.water_drop,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Lượng nước uống không được để trống';
+                                }
+                                if (double.tryParse(value) == null || double.parse(value) < 0) {
+                                  return 'Lượng nước uống phải là số không âm';
+                                }
+                                return null;
+                              }),
+                          SizedBox(height: 20),
+                          _buildHealthTextField(healthControllers['FCVC']!, "Tần suất ăn rau (1-3)", Icons.eco,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Tần suất ăn rau không được để trống';
+                                }
+                                final val = double.tryParse(value);
+                                if (val == null || val < 1 || val > 3) {
+                                  return 'Giá trị phải từ 1 đến 3';
+                                }
+                                return null;
+                              }),
+                          SizedBox(height: 20),
+                          _buildHealthTextField(healthControllers['NCP']!, "Số bữa ăn chính/ngày", Icons.restaurant_menu,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Số bữa ăn chính không được để trống';
+                                }
+                                final val = double.tryParse(value);
+                                if (val == null || val < 1 || val > 4) {
+                                  return 'Giá trị phải từ 1 đến 4';
+                                }
+                                return null;
+                              }),
+                          
+                          SizedBox(height: 30),
+                          
+                          // Thông tin lối sống
+                          _buildSectionTitle("Thông tin lối sống", Icons.fitness_center),
+                          SizedBox(height: 20),
+                          _buildHealthTextField(healthControllers['FAF']!, "Tần suất hoạt động thể chất (1-3)", Icons.fitness_center,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Tần suất hoạt động thể chất không được để trống';
+                                }
+                                final val = double.tryParse(value);
+                                if (val == null || val < 1 || val > 3) {
+                                  return 'Giá trị phải từ 1 đến 3';
+                                }
+                                return null;
+                              }),
+                          SizedBox(height: 20),
+                          _buildHealthTextField(healthControllers['TUE']!, "Thời gian sử dụng thiết bị (giờ/ngày)", Icons.computer,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Thời gian sử dụng thiết bị không được để trống';
+                                }
+                                final val = double.tryParse(value);
+                                if (val == null || val < 0 || val > 2) {
+                                  return 'Giá trị phải từ 0 đến 2';
+                                }
+                                return null;
+                              }),
+                          
+                          SizedBox(height: 20),
+                          
+                          // Dropdowns
+                          _buildHealthDropdown("Ăn giữa các bữa chính", selectedCAEC, 
+                              ["Không", "Thỉnh thoảng", "Thường xuyên", "Luôn luôn"], (value) {
+                            setModalState(() => selectedCAEC = value ?? "");
+                          }, validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng chọn tần suất ăn giữa bữa';
+                            }
+                            return null;
+                          }),
+                          SizedBox(height: 20),
+                          _buildHealthDropdown("Uống rượu", selectedCALC, 
+                              ["Không", "Thỉnh thoảng", "Thường xuyên", "Luôn luôn"], (value) {
+                            setModalState(() => selectedCALC = value ?? "");
+                          }, validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng chọn tần suất uống rượu';
+                            }
+                            return null;
+                          }),
+                          SizedBox(height: 20),
+                          _buildHealthDropdown("Ăn thức ăn nhiều calo", selectedFAVC, 
+                              ["Không", "Có"], (value) {
+                            setModalState(() => selectedFAVC = value ?? "");
+                          }, validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng chọn có ăn thức ăn nhiều calo không';
+                            }
+                            return null;
+                          }),
+                          SizedBox(height: 20),
+                          _buildHealthDropdown("Theo dõi calo", selectedSCC, 
+                              ["Không", "Có"], (value) {
+                            setModalState(() => selectedSCC = value ?? "");
+                          }, validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng chọn có theo dõi calo không';
+                            }
+                            return null;
+                          }),
+                          SizedBox(height: 20),
+                          _buildHealthDropdown("Hút thuốc", selectedSMOKE, 
+                              ["Không", "Có"], (value) {
+                            setModalState(() => selectedSMOKE = value ?? "");
+                          }, validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng chọn có hút thuốc không';
+                            }
+                            return null;
+                          }),
+                          SizedBox(height: 20),
+                          _buildHealthDropdown("Phương tiện di chuyển", selectedMTRANS, 
+                              ["Phương tiện công cộng", "Đi bộ", "Ô tô", "Xe máy", "Xe đạp"], (value) {
+                            setModalState(() => selectedMTRANS = value ?? "");
+                          }, validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng chọn phương tiện di chuyển';
+                            }
+                            return null;
+                          }),
+                          SizedBox(height: 20),
+                          _buildHealthDropdown("Tiền sử gia đình thừa cân", selectedFamilyHistory, 
+                              ["Không", "Có"], (value) {
+                            setModalState(() => selectedFamilyHistory = value ?? "");
+                          }, validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng chọn có tiền sử gia đình thừa cân không';
+                            }
+                            return null;
+                          }),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // Actions
+                Container(
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                            side: BorderSide(color: Colors.grey.shade400),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text("Hủy", style: TextStyle(fontSize: 16, color: Colors.grey.shade700)),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (_healthFormKey.currentState!.validate()) {
+                              _performHealthDiagnosis();
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade600,
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 2,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.analytics, color: Colors.white, size: 20),
+                              SizedBox(width: 8),
+                              Text("Chuẩn đoán", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: Colors.blue.shade600, size: 20),
+        ),
+        SizedBox(width: 12),
+        Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade800)),
+      ],
+    );
+  }
+
+  void _populateHealthDataFromProfile() {
+    // Điền dữ liệu từ profile nếu có
+    if (controllers['age']!.text.isNotEmpty) {
+      healthControllers['Age']!.text = controllers['age']!.text;
+    }
+    if (controllers['height']!.text.isNotEmpty) {
+      double heightCm = double.tryParse(controllers['height']!.text) ?? 0;
+      healthControllers['Height']!.text = (heightCm / 100).toStringAsFixed(2);
+    }
+    if (controllers['weight']!.text.isNotEmpty) {
+      healthControllers['Weight']!.text = controllers['weight']!.text;
+    }
+    
+    // Set gender
+    selectedGender = gender == "Nữ" ? "Nữ" : "Nam";
+  }
+
+  Widget _buildHealthTextField(TextEditingController controller, String label, IconData icon, {String? Function(String?)? validator}) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        validator: validator,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Container(
+            margin: EdgeInsets.all(8),
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 18, color: Colors.blue.shade600),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.blue.shade400, width: 2),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          labelStyle: TextStyle(color: Colors.grey.shade600),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHealthDropdown(String label, String value, List<String> items, Function(String?) onChanged, {String? Function(String?)? validator}) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: DropdownButtonFormField<String>(
+        value: value.isEmpty ? null : value,
+        validator: validator,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.blue.shade400, width: 2),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          labelStyle: TextStyle(color: Colors.grey.shade600),
+        ),
+        dropdownColor: Colors.white,
+        style: TextStyle(color: Colors.grey.shade800, fontSize: 16),
+        items: items.map((item) => DropdownMenuItem(
+          value: item,
+          child: Text(item, style: TextStyle(fontSize: 16)),
+        )).toList(),
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  Future<void> _performHealthDiagnosis() async {
+    Navigator.pop(context); // Đóng modal
+    setState(() => isLoading = true);
+
+    try {
+      final requestData = {
+        "Age": int.parse(healthControllers['Age']!.text),
+        "CAEC": _mapCAECToEnglish(selectedCAEC),
+        "CALC": _mapCALCToEnglish(selectedCALC),
+        "CH2O": double.tryParse(healthControllers['CH2O']!.text) ?? 2.0,
+        "FAF": double.tryParse(healthControllers['FAF']!.text) ?? 1.0,
+        "FAVC": _mapYesNoToEnglish(selectedFAVC),
+        "FCVC": double.tryParse(healthControllers['FCVC']!.text) ?? 2.0,
+        "Gender": selectedGender == "Nữ" ? "Female" : "Male",
+        "Height": double.parse(healthControllers['Height']!.text),
+        "MTRANS": _mapMTRANSToEnglish(selectedMTRANS),
+        "NCP": double.tryParse(healthControllers['NCP']!.text) ?? 3.0,
+        "SCC": _mapYesNoToEnglish(selectedSCC),
+        "SMOKE": _mapYesNoToEnglish(selectedSMOKE),
+        "TUE": double.tryParse(healthControllers['TUE']!.text) ?? 1.0,
+        "Weight": double.parse(healthControllers['Weight']!.text),
+        "family_history_with_overweight": _mapYesNoToEnglish(selectedFamilyHistory),
+      };
+
+      final response = await _userService.performHealthDiagnosis(requestData);
+      
+      if (response != null) {
+        _showDiagnosisResult(response);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Lỗi khi chuẩn đoán sức khỏe"), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi: $e"), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  // Helper methods để map từ tiếng Việt sang tiếng Anh
+  String _mapCAECToEnglish(String value) {
+    switch (value) {
+      case "Không": return "no";
+      case "Thỉnh thoảng": return "Sometimes";
+      case "Thường xuyên": return "Frequently";
+      case "Luôn luôn": return "Always";
+      default: return "no";
+    }
+  }
+
+  String _mapCALCToEnglish(String value) {
+    switch (value) {
+      case "Không": return "no";
+      case "Thỉnh thoảng": return "Sometimes";
+      case "Thường xuyên": return "Frequently";
+      case "Luôn luôn": return "Always";
+      default: return "no";
+    }
+  }
+
+  String _mapYesNoToEnglish(String value) {
+    switch (value) {
+      case "Có": return "yes";
+      case "Không": return "no";
+      default: return "no";
+    }
+  }
+
+  String _mapMTRANSToEnglish(String value) {
+    switch (value) {
+      case "Phương tiện công cộng": return "Public_Transportation";
+      case "Đi bộ": return "Walking";
+      case "Ô tô": return "Automobile";
+      case "Xe máy": return "Motorbike";
+      case "Xe đạp": return "Bike";
+      default: return "Public_Transportation";
+    }
+  }
+
+  void _showDiagnosisResult(Map<String, dynamic> result) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          constraints: BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header với gradient
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.green.shade400, Colors.green.shade600],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                padding: EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.analytics, color: Colors.white, size: 28),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Kết quả chuẩn đoán", 
+                               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                          Text("Phân tích hoàn tất", 
+                               style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.9))),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Content
+              Padding(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    // BMI Card
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.blue.shade50, Colors.blue.shade100],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.speed, color: Colors.blue.shade600, size: 24),
+                              SizedBox(width: 8),
+                              Text("CHỈ SỐ BMI", 
+                                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+                            ],
+                          ),
+                          SizedBox(height: 12),
+                          Text("${result['bmi']?.toStringAsFixed(2) ?? 'N/A'}", 
+                               style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.blue.shade800)),
+                          SizedBox(height: 8),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _getBMIColor(result['bmi']),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text("${result['bmi_category'] ?? 'N/A'}", 
+                                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    SizedBox(height: 20),
+                    
+                    // Prediction Card
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.orange.shade50, Colors.orange.shade100],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.trending_up, color: Colors.orange.shade600, size: 24),
+                              SizedBox(width: 8),
+                              Text("DỰ ĐOÁN TÌNH TRẠNG", 
+                                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.orange.shade700)),
+                            ],
+                          ),
+                          SizedBox(height: 12),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _getPredictionColor(result['prediction']),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text("${_mapPredictionToVietnamese(result['prediction'])}", 
+                                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    SizedBox(height: 20),
+                    
+                    // Description
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.grey.shade600, size: 20),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text("Dựa trên thông tin bạn cung cấp, đây là kết quả chuẩn đoán tình trạng sức khỏe của bạn.", 
+                                 style: TextStyle(fontSize: 14, color: Colors.grey.shade700)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Actions
+              Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Text("Đóng", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getBMIColor(double? bmi) {
+    if (bmi == null) return Colors.grey;
+    if (bmi < 18.5) return Colors.blue;
+    if (bmi < 25) return Colors.green;
+    if (bmi < 30) return Colors.orange;
+    return Colors.red;
+  }
+
+  Color _getPredictionColor(String? prediction) {
+    if (prediction == null) return Colors.grey;
+    switch (prediction.toLowerCase()) {
+      case 'normal_weight':
+        return Colors.green;
+      case 'overweight_level_i':
+        return Colors.orange;
+      case 'overweight_level_ii':
+        return Colors.red;
+      case 'obesity_type_i':
+        return Colors.red.shade700;
+      case 'obesity_type_ii':
+        return Colors.red.shade800;
+      case 'obesity_type_iii':
+        return Colors.red.shade900;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _mapPredictionToVietnamese(String? prediction) {
+    if (prediction == null) return 'Không xác định';
+    switch (prediction.toLowerCase()) {
+      case 'normal_weight':
+        return 'Cân nặng bình thường';
+      case 'overweight_level_i':
+        return 'Thừa cân cấp độ I';
+      case 'overweight_level_ii':
+        return 'Thừa cân cấp độ II';
+      case 'obesity_type_i':
+        return 'Béo phì loại I';
+      case 'obesity_type_ii':
+        return 'Béo phì loại II';
+      case 'obesity_type_iii':
+        return 'Béo phì loại III';
+      default:
+        return prediction;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -491,6 +1325,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           actions: [
+            IconButton(
+              icon: Icon(Icons.health_and_safety, color: Colors.blue),
+              onPressed: _showHealthDiagnosisModal,
+              tooltip: 'Chuẩn đoán sức khỏe',
+            ),
             IconButton(
               icon: Icon(Icons.delete_forever, color: Colors.red),
               onPressed: _handleClearData,
@@ -843,6 +1682,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     controllers.forEach((_, controller) => controller.dispose());
+    healthControllers.forEach((_, controller) => controller.dispose());
     super.dispose();
   }
 }
