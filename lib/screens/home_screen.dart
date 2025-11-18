@@ -95,16 +95,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
           var food = mealLog['food'];
           if (food != null) {
+            int weightInGrams = (mealLog['weightInGrams'] as num?)?.toInt() ?? 100;
+            
+            String servingSizeStr = food['servingSize']?.toString() ?? '100g';
+            double servingSizeGrams = double.tryParse(servingSizeStr.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 100.0;
+            
+            double ratio = weightInGrams / servingSizeGrams;
+            
+            double baseCalories = (food['calories'] as num?)?.toDouble() ?? 0.0;
+            double baseProtein = (food['protein'] as num?)?.toDouble() ?? 0.0;
+            double baseCarbs = (food['carbs'] as num?)?.toDouble() ?? 0.0;
+            double baseFat = (food['fat'] as num?)?.toDouble() ?? 0.0;
+            
             foodHistoryItems.add(FoodHistoryItem(
               id: (mealLog['id'] ?? '').toString(),
               foodId: (food['id'] ?? '').toString(),
               name: food['name'] ?? 'Không có tên',
-              calories: (food['calories'] as num?)?.toDouble() ?? 0.0,
+              calories: baseCalories * ratio,
               mealType: mealTypeName,
-              carbs: (food['carbs'] as num?)?.toDouble() ?? 0.0,
-              protein: (food['protein'] as num?)?.toDouble() ?? 0.0,
-              fat: (food['fat'] as num?)?.toDouble() ?? 0.0,
-              servingSize: '${mealLog['weightInGrams']?.toString() ?? '100'}g',
+              carbs: baseCarbs * ratio,
+              protein: baseProtein * ratio,
+              fat: baseFat * ratio,
+              servingSize: '${weightInGrams}g',
             ));
           }
         }
@@ -167,14 +179,14 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       } else {
         setState(() {
-          _weightLost = 0.0; // Fallback value
+          _weightLost = 0.0;
           _isLoading = false;
         });
       }
     } catch (e) {
       print("❌ Error fetching weight lost: $e");
       setState(() {
-        _weightLost = 0.0; // Fallback value
+        _weightLost = 0.0;
         _isLoading = false;
       });
     }
@@ -327,7 +339,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final double enteredAmount = (suggestion['weightInGrams'] as num?)?.toDouble() ?? 0.0;
       final String suggestionMealType = suggestion['mealType'] ?? '';
 
-      // Validate inputs
       if (enteredAmount <= 0) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -344,7 +355,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Map localized meal type back to API enum
       final Map<String, String> mealTypeToEnum = {
         'Bữa sáng': 'BREAKFAST',
         'Bữa trưa': 'LUNCH',
@@ -353,7 +363,6 @@ class _HomeScreenState extends State<HomeScreen> {
       };
       String apiMealType = mealTypeToEnum[suggestionMealType] ?? suggestionMealType;
 
-      // Ensure mealType is valid
       if (!['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'].contains(apiMealType)) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -362,7 +371,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Create JSON data to send to API
       Map<String, dynamic> requestData = {
         "mealType": apiMealType,
         "date": DateFormat('yyyy-MM-dd').format(_selectedDay),
@@ -372,23 +380,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
       print("🔵 Request gửi lên API: $requestData");
 
-      // Send API request
       final response = await _foodService.addFoodToMeal(requestData);
       print("🟢 Phản hồi từ API: $response");
 
       if (response['code'] == 200) {
-        // In foodId từ requestData
         print("✅ Đã thêm món ăn: ${food['name']}, Food ID: ${requestData['foodId']}");
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Đã thêm ${food['name']} vào $suggestionMealType"),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2), // Thời gian hiển thị ngắn để không cản trở
+            duration: Duration(seconds: 2),
           ),
         );
-        _fetchMealLogs(); // Làm mới danh sách lịch sử món ăn
-        // In tất cả foodId từ _foodHistory để kiểm tra
+        _fetchMealLogs();
         print("🔍 FoodHistory sau khi thêm:");
         _foodHistory.forEach((item) {
           print("✅ FoodHistoryItem: ${item.name}, Food ID: ${item.foodId}, Meal Type: ${item.mealType}");

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import '../service/food_service.dart';
 
 class FoodDetailScreen extends StatefulWidget {
@@ -128,7 +129,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                   backgroundColor: const Color(0xFFFCE4EC), // Light pink color from the screenshot
                   flexibleSpace: FlexibleSpaceBar(
                     title: Text(
-                      food['name'] ?? 'Unknown Food',
+                      _foodData!['name'] ?? 'Unknown Food',
                       style: const TextStyle(
                         color: Colors.black87,
                         fontWeight: FontWeight.bold,
@@ -290,7 +291,10 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                                 // Amount input field
                                 TextField(
                                   controller: _amountController,
-                                  keyboardType: TextInputType.number,
+                                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                                  ],
                                   decoration: InputDecoration(
                                     labelText: "Số gram thực tế",
                                     border: OutlineInputBorder(
@@ -298,6 +302,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                                     ),
                                     contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                     suffixText: "g",
+                                    hintText: "Nhập số gram (ví dụ: 200)",
                                   ),
                                 ),
 
@@ -356,7 +361,14 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                                       padding: EdgeInsets.symmetric(vertical: 15),
                                     ),
                                     onPressed: () {
-                                      double enteredAmount = double.tryParse(_amountController.text) ?? 0.0;
+                                      // Lấy giá trị từ TextField và parse
+                                      // Loại bỏ tất cả ký tự không phải số và dấu chấm
+                                      String amountText = _amountController.text.trim().replaceAll(RegExp(r'[^0-9.]'), '');
+                                      print("🔵 TextField value (raw): '${_amountController.text}'");
+                                      print("🔵 TextField value (cleaned): '$amountText'");
+                                      
+                                      double enteredAmount = double.tryParse(amountText) ?? 0.0;
+                                      print("🔵 Parsed enteredAmount: $enteredAmount");
 
                                       if (enteredAmount <= 0) {
                                         ScaffoldMessenger.of(context).showSnackBar(
@@ -365,15 +377,43 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                                         return;
                                       }
 
-                                      // Tạo JSON data để gửi lên API
+                                      // Helper function để parse số an toàn
+                                      double safeParseDouble(dynamic value, double defaultValue) {
+                                        if (value == null) return defaultValue;
+                                        if (value is num) return value.toDouble();
+                                        if (value is String) {
+                                          final parsed = double.tryParse(value);
+                                          return parsed ?? defaultValue;
+                                        }
+                                        return defaultValue;
+                                      }
+
+                                      // Map dữ liệu từ _foodData vào request body
+                                      // Ưu tiên calories_per_100g nếu có (từ predict API), nếu không thì dùng calories
+                                      double foodCalories = safeParseDouble(
+                                        _foodData!['calories_per_100g'] ?? _foodData!['calories'], 
+                                        0.0
+                                      );
+
+                                      // Tạo JSON data để gửi lên API với đầy đủ thông tin
+                                      int weightInGrams = enteredAmount.toInt();
+                                      print("🔵 weightInGrams sẽ gửi: $weightInGrams");
+                                      
                                       Map<String, dynamic> requestData = {
                                         "mealType": widget.mealType,
                                         "date": widget.selectedDate.toIso8601String().split('T')[0],
                                         "foodId": widget.foodId,
-                                        "weightInGrams": enteredAmount,
+                                        "foodName": _foodData!['name']?.toString() ?? 'Unknown Food',
+                                        "foodCalories": foodCalories,
+                                        "foodProtein": safeParseDouble(_foodData!['protein'], 0.0),
+                                        "foodCarbs": safeParseDouble(_foodData!['carbs'], 0.0),
+                                        "foodFat": safeParseDouble(_foodData!['fat'], 0.0),
+                                        "foodFiber": safeParseDouble(_foodData!['fiber'], 0.0),
+                                        "weightInGrams": weightInGrams,
                                       };
 
                                       print("🔵 Request gửi lên API: $requestData");
+                                      print("🔵 _foodData: $_foodData");
 
                                       // Gửi API
                                       foodService.addFoodToMeal(requestData).then((response) {

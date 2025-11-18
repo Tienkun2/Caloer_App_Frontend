@@ -267,18 +267,35 @@ class FoodService {
         
         if (data["success"] == true && data["result"]["success"] == true) {
           final result = data["result"];
-          final nutrition = result["nutrition_info"];
+          final nutrition = result["nutrition_info"] ?? {};
+          
+          // Helper function để parse số an toàn
+          double safeParseDouble(dynamic value, double defaultValue) {
+            if (value == null) return defaultValue;
+            if (value is num) return value.toDouble();
+            if (value is String) {
+              final parsed = double.tryParse(value);
+              return parsed ?? defaultValue;
+            }
+            return defaultValue;
+          }
+          
+          // Ưu tiên calories_per_100g từ API response
+          double caloriesPer100g = safeParseDouble(result["calories_per_100g"] ?? result["calories"], 0.0);
+          double quantity = safeParseDouble(result["quantity"], 100.0);
+          String unit = result["unit"]?.toString() ?? "g";
           
           return {
             "id": DateTime.now().millisecondsSinceEpoch,
             "name": result["food"] ?? "Unknown Food",
-            "calories": (result["calories"] ?? 0).toDouble(),
-            "protein": (nutrition["protein"] ?? 0).toDouble(),
-            "fat": (nutrition["fat"] ?? 0).toDouble(),
-            "carbs": (nutrition["carbs"] ?? 0).toDouble(),
-            "fiber": (nutrition["fiber"] ?? 0).toDouble(),
-            "servingAmount": (result["quantity"] ?? 100).toDouble(),
-            "servingSize": "${result["quantity"] ?? 100}${result["unit"] ?? "g"}",
+            "calories": caloriesPer100g,
+            "calories_per_100g": caloriesPer100g, // Lưu thêm field này để dễ map
+            "protein": safeParseDouble(nutrition["protein"], 0.0),
+            "fat": safeParseDouble(nutrition["fat"], 0.0),
+            "carbs": safeParseDouble(nutrition["carbs"], 0.0),
+            "fiber": safeParseDouble(nutrition["fiber"], 0.0),
+            "servingAmount": quantity,
+            "servingSize": "$quantity$unit",
             "createdAt": DateTime.now().toIso8601String(),
             "updatedAt": DateTime.now().toIso8601String(),
             "isFromPredict": true,
