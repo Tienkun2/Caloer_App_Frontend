@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
+import 'package:flutter/scheduler.dart';
 import 'package:caloer_app/service/chat_gemini_service.dart';
 import 'package:caloer_app/screens/home_screen.dart';
 
@@ -13,6 +13,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final List<ChatMessage> _messages = [];
   final ChatGeminiService _chatService = ChatGeminiService();
   final ScrollController _scrollController = ScrollController();
+  late final VoidCallback _scrollListener;
 
   bool _isTyping = false;
   bool _showScrollToBottom = false;
@@ -20,30 +21,37 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels <
-          _scrollController.position.maxScrollExtent - 300) {
-        if (!_showScrollToBottom) {
-          setState(() {
-            _showScrollToBottom = true;
-          });
-        }
-      } else {
-        if (_showScrollToBottom) {
-          setState(() {
-            _showScrollToBottom = false;
-          });
-        }
-      }
-    });
+    _scrollListener = _handleScroll;
+    _scrollController.addListener(_scrollListener);
   }
 
-  void _scrollToBottom() {
-    _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
-      duration: Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final distanceFromBottom =
+        position.maxScrollExtent - position.pixels;
+    final shouldShow = distanceFromBottom > 150;
+    if (shouldShow != _showScrollToBottom) {
+      setState(() {
+        _showScrollToBottom = shouldShow;
+      });
+    }
+  }
+
+  void _scrollToBottom({bool animated = true}) {
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      final target = _scrollController.position.maxScrollExtent;
+      if (animated) {
+        _scrollController.animateTo(
+          target,
+          duration: Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollController.jumpTo(target);
+      }
+    });
   }
 
   @override
@@ -155,11 +163,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       controller: _scrollController,
                       padding: EdgeInsets.fromLTRB(16, 20, 16, 16),
                       itemCount: _messages.length,
-                      reverse: true,
                       itemBuilder: (context, index) {
                         return _buildMessageWithAnimation(
-                          _messages[_messages.length - 1 - index],
-                          _messages.length - 1 - index,
+                          _messages[index],
+                          index,
                         );
                       },
                     ),
@@ -716,10 +723,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       _isTyping = true;
     });
 
-    // Cuộn xuống tin nhắn mới nhất
-    Timer(Duration(milliseconds: 100), () {
-      _scrollToBottom();
-    });
+    _scrollToBottom();
 
     try {
       // Gửi yêu cầu đến Gemini API
@@ -737,12 +741,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           );
         });
 
-        // Cuộn xuống tin nhắn mới nhất
-        Timer(Duration(milliseconds: 100), () {
-          if (_scrollController.hasClients) {
-            _scrollToBottom();
-          }
-        });
+        _scrollToBottom();
       }
     } catch (e) {
       if (mounted) {
@@ -755,6 +754,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             ),
           );
         });
+        _scrollToBottom();
       }
     }
   }
@@ -762,6 +762,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _textController.dispose();
+    _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     super.dispose();
   }

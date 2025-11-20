@@ -1,11 +1,23 @@
 import 'package:caloer_app/screens/login_screen.dart';
 import 'package:caloer_app/screens/home_screen.dart';
-import 'package:caloer_app/service/google_auth_service.dart';
 import 'package:flutter/material.dart';
 import '../service/user_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:math' as math;
-import '../config/ApiConfig.dart';
+
+class OptionItem {
+  final String label;
+  final String value;
+  final String description;
+  final String apiValue;
+
+  const OptionItem({
+    required this.label,
+    required this.value,
+    required this.description,
+    String? apiValue,
+  }) : apiValue = apiValue ?? value;
+}
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -30,11 +42,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'Age': TextEditingController(),
     'Height': TextEditingController(),
     'Weight': TextEditingController(),
-    'CH2O': TextEditingController(),
-    'FAF': TextEditingController(),
-    'FCVC': TextEditingController(),
-    'NCP': TextEditingController(),
-    'TUE': TextEditingController(),
   };
 
   // Dropdown values cho modal chuẩn đoán
@@ -46,6 +53,90 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String selectedSMOKE = "";
   String selectedMTRANS = "";
   String selectedFamilyHistory = "";
+  String selectedCH2O = "";
+  String selectedFCVC = "";
+  String selectedNCP = "";
+  String selectedFAF = "";
+  String selectedTUE = "";
+
+  final List<OptionItem> _genderOptions = const [
+    OptionItem(label: "Nam", value: "Male", description: "Giới tính nam"),
+    OptionItem(label: "Nữ", value: "Female", description: "Giới tính nữ"),
+  ];
+
+  final List<OptionItem> _snackOptions = const [
+    OptionItem(label: "Không ăn vặt", value: "snack_none", apiValue: "Sometimes", description: "Hiếm khi ăn giữa các bữa (API chỉ nhận từ 'Sometimes')"),
+    OptionItem(label: "Thỉnh thoảng", value: "snack_sometimes", apiValue: "Sometimes", description: "Ăn vặt 1-2 lần/tuần"),
+    OptionItem(label: "Thường xuyên", value: "snack_frequently", apiValue: "Frequently", description: "Ăn vặt gần như mỗi ngày"),
+    OptionItem(label: "Luôn luôn", value: "snack_always", apiValue: "Always", description: "Luôn ăn thêm giữa các bữa"),
+  ];
+
+  final List<OptionItem> _alcoholOptions = const [
+    OptionItem(label: "Không uống", value: "no", description: "Không sử dụng đồ uống có cồn"),
+    OptionItem(label: "Thỉnh thoảng", value: "Sometimes", description: "Uống trong những dịp nhất định"),
+    OptionItem(label: "Thường xuyên", value: "Frequently", description: "Uống nhiều lần trong tuần"),
+    OptionItem(label: "Rất thường xuyên", value: "Always", description: "Sử dụng gần như mỗi ngày"),
+  ];
+
+  final List<OptionItem> _highCalorieOptions = const [
+    OptionItem(label: "Ít/Không ăn", value: "no", description: "Hiếm khi dùng đồ ăn giàu calo"),
+    OptionItem(label: "Có ăn thường xuyên", value: "yes", description: "Thường xuyên dùng đồ ăn nhiều calo"),
+  ];
+
+  final List<OptionItem> _monitorOptions = const [
+    OptionItem(label: "Không theo dõi", value: "no", description: "Không ghi lại lượng calo hằng ngày"),
+    OptionItem(label: "Có theo dõi", value: "yes", description: "Theo dõi calo nạp vào/tiêu hao"),
+  ];
+
+  final List<OptionItem> _smokeOptions = const [
+    OptionItem(label: "Không hút thuốc", value: "no", description: "Không có thói quen hút thuốc"),
+    OptionItem(label: "Có hút thuốc", value: "yes", description: "Đang hút hoặc đã từng hút"),
+  ];
+
+  final List<OptionItem> _transportOptions = const [
+    OptionItem(label: "Phương tiện công cộng", value: "Public_Transportation", description: "Xe bus, tàu điện..."),
+    OptionItem(label: "Đi bộ", value: "Walking", description: "Đi bộ là chính"),
+    OptionItem(label: "Ô tô", value: "Automobile", description: "Tự lái hoặc đi nhờ ô tô"),
+    OptionItem(label: "Xe máy", value: "Motorbike", description: "Di chuyển bằng xe máy"),
+    OptionItem(label: "Xe đạp", value: "Bike", description: "Đạp xe là phương tiện chính"),
+  ];
+
+  final List<OptionItem> _familyHistoryOptions = const [
+    OptionItem(label: "Không có", value: "no", description: "Gia đình không ai thừa cân/béo phì"),
+    OptionItem(label: "Có", value: "yes", description: "Có người thân từng thừa cân/béo phì"),
+  ];
+
+  final List<OptionItem> _waterOptions = const [
+    OptionItem(label: "≈1L/ngày", value: "1.0", description: "Uống ít nước (<1.5L/ngày)"),
+    OptionItem(label: "≈2L/ngày", value: "2.0", description: "Mức khuyến nghị (1.5–2.5L/ngày)"),
+    OptionItem(label: "≥3L/ngày", value: "3.0", description: "Uống nhiều nước (>2.5L/ngày)"),
+  ];
+
+  final List<OptionItem> _fcvcOptions = const [
+    OptionItem(label: "Hiếm khi ăn rau", value: "1.0", description: "Ăn rau <1 lần/ngày"),
+    OptionItem(label: "Thỉnh thoảng", value: "2.0", description: "Ăn rau 1–2 lần/ngày"),
+    OptionItem(label: "Thường xuyên", value: "3.0", description: "Ăn rau trong hầu hết bữa ăn"),
+  ];
+
+  final List<OptionItem> _ncpOptions = const [
+    OptionItem(label: "1 bữa chính/ngày", value: "1.0", description: "Thường bỏ bữa"),
+    OptionItem(label: "2 bữa chính/ngày", value: "2.0", description: "Ăn 2 bữa (ví dụ: trưa & tối)"),
+    OptionItem(label: "3 bữa chính/ngày", value: "3.0", description: "Ăn đủ 3 bữa (sáng/trưa/tối)"),
+    OptionItem(label: "4 bữa chính/ngày", value: "4.0", description: "Chia nhỏ thành 4 bữa trở lên"),
+  ];
+
+  final List<OptionItem> _physicalActivityOptions = const [
+    OptionItem(label: "Không tập", value: "0.0", description: "Hầu như không vận động"),
+    OptionItem(label: "Thỉnh thoảng", value: "1.0", description: "Tập ≤2 lần/tuần"),
+    OptionItem(label: "Thường xuyên", value: "2.0", description: "Tập 3-4 lần/tuần"),
+    OptionItem(label: "Rất thường xuyên", value: "3.0", description: "Tập hầu như mỗi ngày"),
+  ];
+
+  final List<OptionItem> _screenTimeOptions = const [
+    OptionItem(label: "< 2 giờ/ngày", value: "0.0", description: "Ít dùng thiết bị"),
+    OptionItem(label: "2-4 giờ/ngày", value: "1.0", description: "Mức trung bình"),
+    OptionItem(label: "> 4 giờ/ngày", value: "2.0", description: "Sử dụng nhiều thiết bị"),
+  ];
   
   // Form key cho validation
   final GlobalKey<FormState> _healthFormKey = GlobalKey<FormState>();
@@ -488,6 +579,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showHealthDiagnosisModal() {
     // Điền dữ liệu từ profile nếu có
     _populateHealthDataFromProfile();
+    _ensureHealthSelectionDefaults();
     
     showDialog(
       context: context,
@@ -591,7 +683,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   })),
                               SizedBox(width: 16),
                               Expanded(child: _buildHealthDropdown("Giới tính", selectedGender, 
-                                  ["Nam", "Nữ"], (value) {
+                                  _genderOptions, (value) {
                                 setModalState(() => selectedGender = value ?? "");
                               }, validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -607,75 +699,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           // Thông tin dinh dưỡng
                           _buildSectionTitle("Thông tin dinh dưỡng", Icons.restaurant),
                           SizedBox(height: 20),
-                          _buildHealthTextField(healthControllers['CH2O']!, "Lượng nước uống (L/ngày)", Icons.water_drop,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Lượng nước uống không được để trống';
-                                }
-                                if (double.tryParse(value) == null || double.parse(value) < 0) {
-                                  return 'Lượng nước uống phải là số không âm';
-                                }
-                                return null;
-                              }),
+                          _buildHealthDropdown("Lượng nước uống (L/ngày)", selectedCH2O,
+                              _waterOptions, (value) {
+                            setModalState(() => selectedCH2O = value ?? "");
+                          }, validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng chọn lượng nước uống';
+                            }
+                            return null;
+                          }),
                           SizedBox(height: 20),
-                          _buildHealthTextField(healthControllers['FCVC']!, "Tần suất ăn rau (1-3)", Icons.eco,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Tần suất ăn rau không được để trống';
-                                }
-                                final val = double.tryParse(value);
-                                if (val == null || val < 1 || val > 3) {
-                                  return 'Giá trị phải từ 1 đến 3';
-                                }
-                                return null;
-                              }),
+                          _buildHealthDropdown("Tần suất ăn rau", selectedFCVC,
+                              _fcvcOptions, (value) {
+                            setModalState(() => selectedFCVC = value ?? "");
+                          }, validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng chọn tần suất ăn rau';
+                            }
+                            return null;
+                          }),
                           SizedBox(height: 20),
-                          _buildHealthTextField(healthControllers['NCP']!, "Số bữa ăn chính/ngày", Icons.restaurant_menu,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Số bữa ăn chính không được để trống';
-                                }
-                                final val = double.tryParse(value);
-                                if (val == null || val < 1 || val > 4) {
-                                  return 'Giá trị phải từ 1 đến 4';
-                                }
-                                return null;
-                              }),
+                          _buildHealthDropdown("Số bữa ăn chính/ngày", selectedNCP,
+                              _ncpOptions, (value) {
+                            setModalState(() => selectedNCP = value ?? "");
+                          }, validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng chọn số bữa ăn chính';
+                            }
+                            return null;
+                          }),
                           
                           SizedBox(height: 30),
                           
                           // Thông tin lối sống
                           _buildSectionTitle("Thông tin lối sống", Icons.fitness_center),
                           SizedBox(height: 20),
-                          _buildHealthTextField(healthControllers['FAF']!, "Tần suất hoạt động thể chất (1-3)", Icons.fitness_center,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Tần suất hoạt động thể chất không được để trống';
-                                }
-                                final val = double.tryParse(value);
-                                if (val == null || val < 1 || val > 3) {
-                                  return 'Giá trị phải từ 1 đến 3';
-                                }
-                                return null;
-                              }),
+                          _buildHealthDropdown("Tần suất hoạt động thể chất", selectedFAF,
+                              _physicalActivityOptions, (value) {
+                            setModalState(() => selectedFAF = value ?? "");
+                          }, validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng chọn tần suất hoạt động thể chất';
+                            }
+                            return null;
+                          }),
                           SizedBox(height: 20),
-                          _buildHealthTextField(healthControllers['TUE']!, "Thời gian sử dụng thiết bị (giờ/ngày)", Icons.computer,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Thời gian sử dụng thiết bị không được để trống';
-                                }
-                                final val = double.tryParse(value);
-                                if (val == null || val < 0 || val > 2) {
-                                  return 'Giá trị phải từ 0 đến 2';
-                                }
-                                return null;
-                              }),
+                          _buildHealthDropdown("Thời gian sử dụng thiết bị", selectedTUE,
+                              _screenTimeOptions, (value) {
+                            setModalState(() => selectedTUE = value ?? "");
+                          }, validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng chọn thời gian sử dụng thiết bị';
+                            }
+                            return null;
+                          }),
                           
                           SizedBox(height: 20),
                           
                           // Dropdowns
                           _buildHealthDropdown("Ăn giữa các bữa chính", selectedCAEC, 
-                              ["Không", "Thỉnh thoảng", "Thường xuyên", "Luôn luôn"], (value) {
+                              _snackOptions, (value) {
                             setModalState(() => selectedCAEC = value ?? "");
                           }, validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -685,7 +768,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           }),
                           SizedBox(height: 20),
                           _buildHealthDropdown("Uống rượu", selectedCALC, 
-                              ["Không", "Thỉnh thoảng", "Thường xuyên", "Luôn luôn"], (value) {
+                              _alcoholOptions, (value) {
                             setModalState(() => selectedCALC = value ?? "");
                           }, validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -695,7 +778,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           }),
                           SizedBox(height: 20),
                           _buildHealthDropdown("Ăn thức ăn nhiều calo", selectedFAVC, 
-                              ["Không", "Có"], (value) {
+                              _highCalorieOptions, (value) {
                             setModalState(() => selectedFAVC = value ?? "");
                           }, validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -705,7 +788,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           }),
                           SizedBox(height: 20),
                           _buildHealthDropdown("Theo dõi calo", selectedSCC, 
-                              ["Không", "Có"], (value) {
+                              _monitorOptions, (value) {
                             setModalState(() => selectedSCC = value ?? "");
                           }, validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -715,7 +798,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           }),
                           SizedBox(height: 20),
                           _buildHealthDropdown("Hút thuốc", selectedSMOKE, 
-                              ["Không", "Có"], (value) {
+                              _smokeOptions, (value) {
                             setModalState(() => selectedSMOKE = value ?? "");
                           }, validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -725,7 +808,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           }),
                           SizedBox(height: 20),
                           _buildHealthDropdown("Phương tiện di chuyển", selectedMTRANS, 
-                              ["Phương tiện công cộng", "Đi bộ", "Ô tô", "Xe máy", "Xe đạp"], (value) {
+                              _transportOptions, (value) {
                             setModalState(() => selectedMTRANS = value ?? "");
                           }, validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -735,7 +818,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           }),
                           SizedBox(height: 20),
                           _buildHealthDropdown("Tiền sử gia đình thừa cân", selectedFamilyHistory, 
-                              ["Không", "Có"], (value) {
+                              _familyHistoryOptions, (value) {
                             setModalState(() => selectedFamilyHistory = value ?? "");
                           }, validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -838,7 +921,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
     
     // Set gender
-    selectedGender = gender == "Nữ" ? "Nữ" : "Nam";
+    selectedGender = gender == "Nữ" ? "Female" : "Male";
+  }
+
+  void _ensureHealthSelectionDefaults() {
+    if (selectedGender.isEmpty) {
+      selectedGender = _genderOptions.first.value;
+    }
+    if (selectedCAEC.isEmpty) {
+      selectedCAEC = _snackOptions.first.value;
+    }
+    if (selectedCALC.isEmpty) {
+      selectedCALC = _alcoholOptions.first.value;
+    }
+    if (selectedFAVC.isEmpty) {
+      selectedFAVC = _highCalorieOptions.first.value;
+    }
+    if (selectedSCC.isEmpty) {
+      selectedSCC = _monitorOptions.first.value;
+    }
+    if (selectedSMOKE.isEmpty) {
+      selectedSMOKE = _smokeOptions.first.value;
+    }
+    if (selectedMTRANS.isEmpty) {
+      selectedMTRANS = _transportOptions.first.value;
+    }
+    if (selectedFamilyHistory.isEmpty) {
+      selectedFamilyHistory = _familyHistoryOptions.first.value;
+    }
+    if (selectedCH2O.isEmpty) {
+      selectedCH2O = _waterOptions[1].value;
+    }
+    if (selectedFCVC.isEmpty) {
+      selectedFCVC = _fcvcOptions[1].value;
+    }
+    if (selectedNCP.isEmpty) {
+      selectedNCP = _ncpOptions[2].value;
+    }
+    if (selectedFAF.isEmpty) {
+      selectedFAF = _physicalActivityOptions[1].value;
+    }
+    if (selectedTUE.isEmpty) {
+      selectedTUE = _screenTimeOptions[1].value;
+    }
   }
 
   Widget _buildHealthTextField(TextEditingController controller, String label, IconData icon, {String? Function(String?)? validator}) {
@@ -898,7 +1023,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildHealthDropdown(String label, String value, List<String> items, Function(String?) onChanged, {String? Function(String?)? validator}) {
+  OptionItem _resolveOptionItem(String currentValue, List<OptionItem> options) {
+    if (options.isEmpty) throw ArgumentError("Options cannot be empty");
+    if (currentValue.isNotEmpty) {
+      for (final item in options) {
+        if (item.value == currentValue) {
+          return item;
+        }
+      }
+    }
+    return options.first;
+  }
+
+  String _selectedOrDefault(String currentValue, List<OptionItem> options) {
+    return _resolveOptionItem(currentValue, options).apiValue;
+  }
+
+  double _selectedValueAsDouble(String currentValue, List<OptionItem> options, double fallback) {
+    final option = _resolveOptionItem(currentValue, options);
+    return double.tryParse(option.apiValue) ?? fallback;
+  }
+
+  Widget _buildHealthDropdown(String label, String value, List<OptionItem> items, Function(String?) onChanged, {String? Function(String?)? validator}) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -914,6 +1060,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: DropdownButtonFormField<String>(
         value: value.isEmpty ? null : value,
         validator: validator,
+        isDense: false,
+        itemHeight: null,
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(
@@ -943,9 +1091,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         dropdownColor: Colors.white,
         style: TextStyle(color: Colors.grey.shade800, fontSize: 16),
+        isExpanded: true,
         items: items.map((item) => DropdownMenuItem(
-          value: item,
-          child: Text(item, style: TextStyle(fontSize: 16)),
+          value: item.value,
+          alignment: AlignmentDirectional.centerStart,
+          child: Text.rich(
+            TextSpan(
+              text: item.label,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey.shade900),
+              children: item.description.isNotEmpty
+                  ? [
+                      TextSpan(text: '\n'),
+                      TextSpan(
+                        text: item.description,
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.normal),
+                      ),
+                    ]
+                  : [],
+            ),
+          ),
         )).toList(),
         onChanged: onChanged,
       ),
@@ -959,21 +1123,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final requestData = {
         "Age": int.parse(healthControllers['Age']!.text),
-        "CAEC": _mapCAECToEnglish(selectedCAEC),
-        "CALC": _mapCALCToEnglish(selectedCALC),
-        "CH2O": double.tryParse(healthControllers['CH2O']!.text) ?? 2.0,
-        "FAF": double.tryParse(healthControllers['FAF']!.text) ?? 1.0,
-        "FAVC": _mapYesNoToEnglish(selectedFAVC),
-        "FCVC": double.tryParse(healthControllers['FCVC']!.text) ?? 2.0,
-        "Gender": selectedGender == "Nữ" ? "Female" : "Male",
+        "CAEC": _selectedOrDefault(selectedCAEC, _snackOptions),
+        "CALC": _selectedOrDefault(selectedCALC, _alcoholOptions),
+        "CH2O": _selectedValueAsDouble(selectedCH2O, _waterOptions, 2.0),
+        "FAF": _selectedValueAsDouble(selectedFAF, _physicalActivityOptions, 1.0),
+        "FAVC": _selectedOrDefault(selectedFAVC, _highCalorieOptions),
+        "FCVC": _selectedValueAsDouble(selectedFCVC, _fcvcOptions, 2.0),
+        "Gender": _selectedOrDefault(selectedGender, _genderOptions),
         "Height": double.parse(healthControllers['Height']!.text),
-        "MTRANS": _mapMTRANSToEnglish(selectedMTRANS),
-        "NCP": double.tryParse(healthControllers['NCP']!.text) ?? 3.0,
-        "SCC": _mapYesNoToEnglish(selectedSCC),
-        "SMOKE": _mapYesNoToEnglish(selectedSMOKE),
-        "TUE": double.tryParse(healthControllers['TUE']!.text) ?? 1.0,
+        "MTRANS": _selectedOrDefault(selectedMTRANS, _transportOptions),
+        "NCP": _selectedValueAsDouble(selectedNCP, _ncpOptions, 3.0),
+        "SCC": _selectedOrDefault(selectedSCC, _monitorOptions),
+        "SMOKE": _selectedOrDefault(selectedSMOKE, _smokeOptions),
+        "TUE": _selectedValueAsDouble(selectedTUE, _screenTimeOptions, 1.0),
         "Weight": double.parse(healthControllers['Weight']!.text),
-        "family_history_with_overweight": _mapYesNoToEnglish(selectedFamilyHistory),
+        "family_history_with_overweight": _selectedOrDefault(selectedFamilyHistory, _familyHistoryOptions),
       };
 
       final response = await _userService.performHealthDiagnosis(requestData);
@@ -991,46 +1155,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     } finally {
       setState(() => isLoading = false);
-    }
-  }
-
-  // Helper methods để map từ tiếng Việt sang tiếng Anh
-  String _mapCAECToEnglish(String value) {
-    switch (value) {
-      case "Không": return "no";
-      case "Thỉnh thoảng": return "Sometimes";
-      case "Thường xuyên": return "Frequently";
-      case "Luôn luôn": return "Always";
-      default: return "no";
-    }
-  }
-
-  String _mapCALCToEnglish(String value) {
-    switch (value) {
-      case "Không": return "no";
-      case "Thỉnh thoảng": return "Sometimes";
-      case "Thường xuyên": return "Frequently";
-      case "Luôn luôn": return "Always";
-      default: return "no";
-    }
-  }
-
-  String _mapYesNoToEnglish(String value) {
-    switch (value) {
-      case "Có": return "yes";
-      case "Không": return "no";
-      default: return "no";
-    }
-  }
-
-  String _mapMTRANSToEnglish(String value) {
-    switch (value) {
-      case "Phương tiện công cộng": return "Public_Transportation";
-      case "Đi bộ": return "Walking";
-      case "Ô tô": return "Automobile";
-      case "Xe máy": return "Motorbike";
-      case "Xe đạp": return "Bike";
-      default: return "Public_Transportation";
     }
   }
 
