@@ -252,7 +252,7 @@ class FoodService {
   }
 
   // API predict mới
-  Future<Map<String, dynamic>> predictFood(String content) async {
+  Future<List<Map<String, dynamic>>> predictFood(String content) async {
     try {
       final response = await http.post(
         Uri.parse('$BASE_URL_AI/predict'),
@@ -262,50 +262,71 @@ class FoodService {
         body: jsonEncode({"content": content}),
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        if (data["success"] == true && data["result"]["success"] == true) {
-          final result = data["result"];
-          final nutrition = result["nutrition_info"] ?? {};
-          
-          // Helper function để parse số an toàn
-          double safeParseDouble(dynamic value, double defaultValue) {
-            if (value == null) return defaultValue;
-            if (value is num) return value.toDouble();
-            if (value is String) {
-              final parsed = double.tryParse(value);
-              return parsed ?? defaultValue;
-            }
-            return defaultValue;
-          }
-          
-          // Ưu tiên calories_per_100g từ API response
-          double caloriesPer100g = safeParseDouble(result["calories_per_100g"] ?? result["calories"], 0.0);
-          double quantity = safeParseDouble(result["quantity"], 100.0);
-          String unit = result["unit"]?.toString() ?? "g";
-          
-          return {
-            "id": DateTime.now().millisecondsSinceEpoch,
-            "name": result["food"] ?? "Unknown Food",
-            "calories": caloriesPer100g,
-            "calories_per_100g": caloriesPer100g, // Lưu thêm field này để dễ map
-            "protein": safeParseDouble(nutrition["protein"], 0.0),
-            "fat": safeParseDouble(nutrition["fat"], 0.0),
-            "carbs": safeParseDouble(nutrition["carbs"], 0.0),
-            "fiber": safeParseDouble(nutrition["fiber"], 0.0),
-            "servingAmount": quantity,
-            "servingSize": "$quantity$unit",
-            "createdAt": DateTime.now().toIso8601String(),
-            "updatedAt": DateTime.now().toIso8601String(),
-            "isFromPredict": true,
-          };
-        } else {
-          throw Exception("Predict API trả về lỗi: ${data["result"]["message"] ?? "Unknown error"}");
-        }
-      } else {
+      if (response.statusCode != 200) {
         throw Exception("Lỗi HTTP ${response.statusCode}: ${response.body}");
       }
+
+      final data = json.decode(response.body);
+
+      if (data["success"] != true || data["result"]?["success"] != true) {
+        throw Exception("Predict API trả về lỗi: ${data["result"]?["message"] ?? "Unknown error"}");
+      }
+
+      final result = data["result"] as Map<String, dynamic>;
+      final matches = (result["matches"] as List<dynamic>? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .toList();
+
+      double safeParseDouble(dynamic value, double defaultValue) {
+        if (value == null) return defaultValue;
+        if (value is num) return value.toDouble();
+        if (value is String) {
+          final parsed = double.tryParse(value);
+          return parsed ?? defaultValue;
+        }
+        return defaultValue;
+      }
+
+      Map<String, dynamic> mapEntry(Map<String, dynamic> entry, int index) {
+        final nutrition = entry["nutrition_info"] ?? {};
+        final double caloriesPer100g = safeParseDouble(
+          entry["calories_per_100g"] ?? entry["calories"] ?? entry["estimated_calories"],
+          0.0,
+        );
+        final double quantity = safeParseDouble(
+          entry["weight_g"] ?? entry["quantity"],
+          100.0,
+        );
+        final String unit = entry["unit"]?.toString() ?? "g";
+
+        return {
+          "id": DateTime.now().millisecondsSinceEpoch + index,
+          "name": entry["food"] ?? result["food"] ?? "Unknown Food",
+          "calories": caloriesPer100g,
+          "calories_per_100g": caloriesPer100g,
+          "protein": safeParseDouble(nutrition["protein"], 0.0),
+          "fat": safeParseDouble(nutrition["fat"], 0.0),
+          "carbs": safeParseDouble(nutrition["carbs"], 0.0),
+          "fiber": safeParseDouble(nutrition["fiber"], 0.0),
+          "servingAmount": quantity,
+          "servingSize": "${quantity.toStringAsFixed(0)}$unit",
+          "confidenceScore": safeParseDouble(entry["score"], 0.0),
+          "weight_g": quantity,
+          "unit": unit,
+          "createdAt": DateTime.now().toIso8601String(),
+          "updatedAt": DateTime.now().toIso8601String(),
+          "isFromPredict": true,
+        };
+      }
+
+      if (matches.isNotEmpty) {
+        return [
+          for (int i = 0; i < matches.length; i++) mapEntry(matches[i], i),
+        ];
+      }
+
+      // fallback nếu API không trả matches
+      return [mapEntry(result, 0)];
     } catch (e) {
       throw Exception("Lỗi predictFood: $e");
     }

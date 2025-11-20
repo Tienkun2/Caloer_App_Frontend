@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:caloer_app/service/food_service.dart';
 import 'food_detail_screen.dart';
 import 'barcode_screen.dart';
@@ -137,25 +136,19 @@ class _ScheduleMealsScreenState extends State<ScheduleMealsScreen> {
     });
 
     try {
-      Map<String, dynamic> predictResult = await foodService.predictFood(processedQuery);
+      List<Map<String, dynamic>> predictResults = await foodService.predictFood(processedQuery);
       
       setState(() {
-        filteredItems = [predictResult];
+        filteredItems = predictResults;
         _isSearching = false;
       });
       
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(
-      //     content: Text('✅ Đã phân tích món ăn từ AI'),
-      //     backgroundColor: Colors.green,
-      //     duration: Duration(seconds: 2),
-      //   ),
-      // );
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ Tìm thấy thông tin dinh dưỡng'),
-          backgroundColor: Colors.blue,
+          content: Text(predictResults.isEmpty
+              ? '😕 AI chưa tìm được món phù hợp'
+              : '✅ Đã tìm thấy ${predictResults.length} lựa chọn'),
+          backgroundColor: predictResults.isEmpty ? Colors.orange : Colors.blue,
           duration: Duration(seconds: 2),
         ),
       );
