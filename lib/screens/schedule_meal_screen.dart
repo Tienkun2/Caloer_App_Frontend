@@ -412,9 +412,10 @@ class _ScheduleMealsScreenState extends State<ScheduleMealsScreen> {
                   topLeft: Radius.circular(15),
                   topRight: Radius.circular(15),
                 ),
-                child: (food['image_url'] != null && food['image_url'].toString().isNotEmpty)
+                child: ((food['imageUrl'] != null && food['imageUrl'].toString().isNotEmpty) ||
+                        (food['image_url'] != null && food['image_url'].toString().isNotEmpty))
                     ? Image.network(
-                        food['image_url'].toString(),
+                        (food['imageUrl'] ?? food['image_url']).toString(),
                         width: double.infinity,
                         height: 120,
                         fit: BoxFit.cover,

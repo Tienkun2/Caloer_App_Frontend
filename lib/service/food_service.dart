@@ -101,6 +101,7 @@ class FoodService {
           "fiber": result["fiber"] is num ? (result["fiber"] as num).toDouble() : 0.0,
           "servingAmount": servingAmount,
           "servingSize": result["servingSize"] ?? "100g",
+          "imageUrl": result["imageUrl"] ?? result["image_url"], // Lấy imageUrl từ DB hoặc image_url
           "createdAt": result["createdAt"] ?? DateTime.now().toIso8601String(),
           "updatedAt": result["updatedAt"] ?? DateTime.now().toIso8601String(),
         };
@@ -248,6 +249,48 @@ class FoodService {
     } catch (e) {
       print("🔴 Lỗi fetchMealSuggestions: $e");
       throw Exception("Lỗi fetchMealSuggestions: $e");
+    }
+  }
+
+  // Lưu món ăn vào database
+  Future<Map<String, dynamic>> saveFood(Map<String, dynamic> foodData) async {
+    try {
+      String? token = await _getToken();
+      if (token == null || token.isEmpty) throw Exception("Không tìm thấy token!");
+
+      // Chuẩn bị dữ liệu để gửi lên server
+      final Map<String, dynamic> requestData = {
+        "name": foodData["name"] ?? "Unknown Food",
+        "calories": foodData["calories"] ?? foodData["calories_per_100g"] ?? 0.0,
+        "protein": foodData["protein"] ?? 0.0,
+        "fat": foodData["fat"] ?? 0.0,
+        "carbs": foodData["carbs"] ?? 0.0,
+        "fiber": foodData["fiber"] ?? 0.0,
+        "servingSize": foodData["servingSize"] ?? "100g",
+        "imageUrl": foodData["image_url"] ?? foodData["imageUrl"], // Lưu imageUrl
+      };
+
+      print("🟡 Lưu món ăn vào DB: ${jsonEncode(requestData)}");
+
+      final response = await http.post(
+        Uri.parse("$BASE_URL/food"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(requestData),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        print("✅ Đã lưu món ăn vào DB: ${data["result"]?["id"]}");
+        return data["result"] ?? data;
+      } else {
+        throw Exception("Lỗi HTTP ${response.statusCode}: ${response.body}");
+      }
+    } catch (e) {
+      print("🔴 Lỗi saveFood: $e");
+      throw Exception("Lỗi saveFood: $e");
     }
   }
 

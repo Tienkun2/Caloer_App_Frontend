@@ -81,6 +81,30 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     });
   }
 
+  // Method để thêm món ăn vào meal log
+  void _addToMealLog(Map<String, dynamic> requestData) {
+    foodService.addFoodToMeal(requestData).then((response) {
+      print("🟢 Phản hồi từ API: $response");
+
+      if (response['code'] == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Đã thêm vào ${widget.mealType}")),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("❌ Lỗi từ API: ${response['message']}")),
+        );
+      }
+    }).catchError((error) {
+      print("🔴 Lỗi API: $error");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi kết nối API: $error")),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -136,10 +160,12 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                         fontSize: 18,
                       ),
                     ),
-                    background: (_foodData!['image_url'] != null && 
-                                  _foodData!['image_url'].toString().isNotEmpty)
+                    background: ((_foodData!['imageUrl'] != null && 
+                                   _foodData!['imageUrl'].toString().isNotEmpty) ||
+                                  (_foodData!['image_url'] != null && 
+                                   _foodData!['image_url'].toString().isNotEmpty))
                         ? Image.network(
-                            _foodData!['image_url'].toString(),
+                            (_foodData!['imageUrl'] ?? _foodData!['image_url']).toString(),
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               // Fallback nếu lỗi load ảnh
@@ -437,27 +463,24 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                                       print("🔵 Request gửi lên API: $requestData");
                                       print("🔵 _foodData: $_foodData");
 
-                                      // Gửi API
-                                      foodService.addFoodToMeal(requestData).then((response) {
-                                        print("🟢 Phản hồi từ API: $response");
-
-                                        if (response['code'] == 200) {
+                                      // Kiểm tra nếu món ăn từ predict API, lưu vào DB trước
+                                      if (_foodData!['isFromPredict'] == true) {
+                                        print("🟡 Món ăn từ predict, đang lưu vào DB...");
+                                        foodService.saveFood(_foodData!).then((savedFood) {
+                                          print("✅ Đã lưu món ăn vào DB với ID: ${savedFood['id']}");
+                                          // Cập nhật foodId với ID thật từ DB
+                                          requestData['foodId'] = savedFood['id'];
+                                          _addToMealLog(requestData);
+                                        }).catchError((error) {
+                                          print("🔴 Lỗi lưu món ăn vào DB: $error");
                                           ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text("Đã thêm vào ${widget.mealType}")),
+                                            SnackBar(content: Text("Lỗi lưu món ăn: $error")),
                                           );
-                                          Navigator.pop(context);
-                                        } else {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text("❌ Lỗi từ API: ${response['message']}")),
-                                          );
-                                        }
-                                      }).catchError((error) {
-                                        print("🔴 Lỗi API: $error");
-
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text("Lỗi kết nối API: $error")),
-                                        );
-                                      });
+                                        });
+                                      } else {
+                                        // Món ăn đã có trong DB, thêm trực tiếp vào meal log
+                                        _addToMealLog(requestData);
+                                      }
                                     },
                                   ),
                                 ),
