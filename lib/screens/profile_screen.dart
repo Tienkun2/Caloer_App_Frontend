@@ -144,6 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   double bmr = 0, tdee = 0, bmi = 0, caloDeficit = 0, firstWeight = 0, dailyCalories = 0;
   String? createdate;
   bool isLoading = true;
+  bool _isEditingWeight = false;
   final UserService _userService = UserService();
 
   @override
@@ -1529,7 +1530,98 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Số đo cơ thể", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text("Số đo cơ thể", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          // Nút chỉnh sửa cân nặng
+                          if (firstWeight > 0)
+                            TextButton.icon(
+                              onPressed: () async {
+                                if (_isEditingWeight) {
+                                  // Lưu cân nặng
+                                  String weightText = controllers['weight']!.text.trim();
+                                  if (weightText.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Vui lòng nhập cân nặng'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  double? weight = double.tryParse(weightText);
+                                  if (weight == null || weight <= 0) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Cân nặng phải là số dương'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  
+                                  setState(() {
+                                    isLoading = true;
+                                  });
+                                  
+                                  try {
+                                    final userData = <String, dynamic>{
+                                      'weight': weight,
+                                    };
+                                    bool success = await _userService.updateUserData(userData);
+                                    
+                                    if (success) {
+                                      await _loadUserData();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Cập nhật cân nặng thành công'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Cập nhật cân nặng thất bại'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Lỗi: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  } finally {
+                                    setState(() {
+                                      isLoading = false;
+                                      _isEditingWeight = false;
+                                    });
+                                  }
+                                } else {
+                                  setState(() {
+                                    _isEditingWeight = true;
+                                  });
+                                }
+                              },
+                              icon: Icon(
+                                _isEditingWeight ? Icons.check : Icons.edit,
+                                size: 18,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                              label: Text(
+                                _isEditingWeight ? "Lưu" : "Chỉnh sửa cân nặng",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                       SizedBox(height: 12),
                       Row(
                         children: [
@@ -1538,7 +1630,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               controllers['weight']!,
                               "Cân nặng (kg)",
                               Icons.monitor_weight,
-                              readOnly: controllers['weight']!.text.isNotEmpty &&
+                              readOnly: !_isEditingWeight && controllers['weight']!.text.isNotEmpty &&
                                   double.tryParse(controllers['weight']!.text) != null &&
                                   double.tryParse(controllers['weight']!.text)! > 0,
                             ),
@@ -1592,36 +1684,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
         ),
-        bottomNavigationBar: Padding(
-          padding: EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _updateProfileData,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: Text("Cập nhật", style: TextStyle(fontSize: 16, color: Colors.white)),
+        bottomNavigationBar: firstWeight > 0
+            ? null // Ẩn bottom bar khi đã cập nhật cân nặng lần đầu (đã có nút chỉnh sửa ở trên)
+            : Padding(
+                padding: EdgeInsets.all(16),
+                child: Row(
+                  // Hiển thị cả 2 nút khi chưa có firstWeight
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _updateProfileData,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text("Cập nhật", style: TextStyle(fontSize: 16, color: Colors.white)),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _handleUpdateWeightLostDaily,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade700,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text("Cập nhật cân nặng", style: TextStyle(fontSize: 16, color: Colors.white)),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _handleUpdateWeightLostDaily,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: Text("Cập nhật cân nặng", style: TextStyle(fontSize: 16, color: Colors.white)),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

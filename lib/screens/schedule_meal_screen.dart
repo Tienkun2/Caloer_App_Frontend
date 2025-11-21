@@ -407,12 +407,58 @@ class _ScheduleMealsScreenState extends State<ScheduleMealsScreen> {
                   topRight: Radius.circular(15),
                 ),
               ),
-              child: Center(
-                child: Icon(
-                  Icons.restaurant_menu,
-                  size: 50,
-                  color: Colors.primaries[food['id'] % Colors.primaries.length],
+              child: ClipRRect(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(15),
+                  topRight: Radius.circular(15),
                 ),
+                child: (food['image_url'] != null && food['image_url'].toString().isNotEmpty)
+                    ? Image.network(
+                        food['image_url'].toString(),
+                        width: double.infinity,
+                        height: 120,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          // Hiển thị icon nếu lỗi load ảnh
+                          return Container(
+                            color: cardColor,
+                            child: Center(
+                              child: Icon(
+                                Icons.restaurant_menu,
+                                size: 50,
+                                color: Colors.primaries[food['id'] % Colors.primaries.length],
+                              ),
+                            ),
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: cardColor,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.primaries[food['id'] % Colors.primaries.length],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : Container(
+                        color: cardColor,
+                        child: Center(
+                          child: Icon(
+                            Icons.restaurant_menu,
+                            size: 50,
+                            color: Colors.primaries[food['id'] % Colors.primaries.length],
+                          ),
+                        ),
+                      ),
               ),
             ),
 

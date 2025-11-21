@@ -136,30 +136,52 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                         fontSize: 18,
                       ),
                     ),
-                    background: Container(
-                      color: const Color(0xFFFCE4EC), // Match the background color
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Center(
-                            child: Icon(
-                              Icons.local_dining, // Replace with a fork-and-spoon icon (or use a custom asset)
-                              size: 80,
-                              color: const Color(0xFFE91E63), // Pink color for the icon
-                            ),
-                          ),
-                          Positioned(
-                            right: 20,
-                            bottom: 20,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
+                    background: (_foodData!['image_url'] != null && 
+                                  _foodData!['image_url'].toString().isNotEmpty)
+                        ? Image.network(
+                            _foodData!['image_url'].toString(),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              // Fallback nếu lỗi load ảnh
+                              return Container(
+                                color: const Color(0xFFFCE4EC),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.local_dining,
+                                    size: 80,
+                                    color: const Color(0xFFE91E63),
+                                  ),
+                                ),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: const Color(0xFFFCE4EC),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      const Color(0xFFE91E63),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: const Color(0xFFFCE4EC),
+                            child: Center(
+                              child: Icon(
+                                Icons.local_dining,
+                                size: 80,
+                                color: const Color(0xFFE91E63),
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
                   ),
                   leading: IconButton(
                     icon: Container(

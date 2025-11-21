@@ -313,6 +313,7 @@ class FoodService {
           "confidenceScore": safeParseDouble(entry["score"], 0.0),
           "weight_g": quantity,
           "unit": unit,
+          "image_url": entry["image_url"], // Thêm image_url từ API
           "createdAt": DateTime.now().toIso8601String(),
           "updatedAt": DateTime.now().toIso8601String(),
           "isFromPredict": true,
