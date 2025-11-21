@@ -5,7 +5,6 @@ import 'package:caloer_app/screens/profile_screen.dart'; // Thay HomeScreen bằ
 import 'package:caloer_app/service/auth_service.dart';
 import 'package:caloer_app/service/google_auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:animate_do/animate_do.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -18,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  String? _errorMessage;
   final GoogleAuthService _googleAuthService = GoogleAuthService();
 
   late AnimationController _animationController;
@@ -34,6 +34,22 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
     _animationController.forward();
+    
+    // Xóa error message khi người dùng nhập
+    _emailController.addListener(() {
+      if (_errorMessage != null) {
+        setState(() {
+          _errorMessage = null;
+        });
+      }
+    });
+    _passwordController.addListener(() {
+      if (_errorMessage != null) {
+        setState(() {
+          _errorMessage = null;
+        });
+      }
+    });
   }
 
   @override
@@ -63,9 +79,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
+    // Xóa error message trước khi đăng nhập
+    setState(() {
+      _errorMessage = null;
+    });
+
     if (email.isEmpty || password.isEmpty) {
-      _showSnackBar("Vui lòng nhập đầy đủ email và mật khẩu");
       setState(() {
+        _errorMessage = "Vui lòng nhập đầy đủ email và mật khẩu";
         _isLoading = false;
       });
       return;
@@ -94,13 +115,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
         );
       } else {
-        _showSnackBar(result["message"] ?? "Đăng nhập thất bại!");
+        // Luôn hiển thị "Sai tài khoản hoặc mật khẩu" khi đăng nhập thất bại
+        setState(() {
+          _errorMessage = "Sai tài khoản hoặc mật khẩu";
+        });
       }
     } catch (e) {
       setState(() {
         _isLoading = false;
+        // Luôn hiển thị "Sai tài khoản hoặc mật khẩu" thay vì lỗi kết nối
+        _errorMessage = "Sai tài khoản hoặc mật khẩu";
       });
-      _showSnackBar("Lỗi kết nối: ${e.toString()}");
     }
   }
 
@@ -314,6 +339,26 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         ),
                       ),
                     ),
+                    // Hiển thị error message màu đỏ
+                    if (_errorMessage != null)
+                      FadeInDown(
+                        delay: Duration(milliseconds: 550),
+                        duration: Duration(milliseconds: 300),
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                color: Colors.red[400],
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 10),
                     FadeInDown(
                       delay: Duration(milliseconds: 600),

@@ -31,7 +31,22 @@ class AuthService {
         return {'success': true, 'result': responseData['result']};
       } else {
         print("⚠️ Đăng nhập thất bại: ${responseData['message']}");
-        return {'success': false, 'message': responseData['message'] ?? 'Đăng nhập thất bại'};
+        
+        // Kiểm tra nếu là lỗi 401 (Unauthorized) hoặc code lỗi xác thực
+        String errorMessage;
+        if (response.statusCode == 401 || 
+            responseData['code'] == 401 ||
+            (responseData['message'] != null && 
+             (responseData['message'].toString().toLowerCase().contains('sai') ||
+              responseData['message'].toString().toLowerCase().contains('invalid') ||
+              responseData['message'].toString().toLowerCase().contains('incorrect') ||
+              responseData['message'].toString().toLowerCase().contains('wrong')))) {
+          errorMessage = 'Sai tài khoản hoặc mật khẩu';
+        } else {
+          errorMessage = responseData['message'] ?? 'Đăng nhập thất bại';
+        }
+        
+        return {'success': false, 'message': errorMessage};
       }
     } catch (e) {
       print('❌ Lỗi đăng nhập: $e');
