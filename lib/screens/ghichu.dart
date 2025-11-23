@@ -3,12 +3,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class GhiChuScreen extends StatefulWidget {
+  const GhiChuScreen({super.key});
+
   @override
   _GhiChuScreenState createState() => _GhiChuScreenState();
 }
 
 class _GhiChuScreenState extends State<GhiChuScreen> {
-  TextEditingController _noteController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
   List<String> _notes = [];
 
   @override

@@ -6,6 +6,8 @@ import 'package:caloer_app/screens/profile_screen.dart';
 import 'package:url_launcher/url_launcher.dart' show canLaunchUrl, launchUrl, LaunchMode;
 
 class TapLuyenScreen extends StatefulWidget {
+  const TapLuyenScreen({super.key});
+
   @override
   _TapLuyenScreenState createState() => _TapLuyenScreenState();
 }
@@ -243,7 +245,7 @@ class WorkoutDetailScreen extends StatefulWidget {
   final String title;
   final String duration;
 
-  WorkoutDetailScreen({required this.title, required this.duration});
+  const WorkoutDetailScreen({super.key, required this.title, required this.duration});
 
   @override
   _WorkoutDetailScreenState createState() => _WorkoutDetailScreenState();
@@ -366,12 +368,6 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
           SizedBox(height: 16),
           ElevatedButton(
             onPressed: isLoading ? null : () => _launchVideo(videoUrl),
-            child: isLoading
-                ? CircularProgressIndicator(color: Colors.white)
-                : Text(
-              "Xem Video Hướng Dẫn",
-              style: TextStyle(fontSize: 16, color: Colors.white),
-            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
@@ -379,6 +375,12 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
+            ),
+            child: isLoading
+                ? CircularProgressIndicator(color: Colors.white)
+                : Text(
+              "Xem Video Hướng Dẫn",
+              style: TextStyle(fontSize: 16, color: Colors.white),
             ),
           ),
         ],
@@ -413,7 +415,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             ),
             child: Row(
               children: [
-                Container(
+                SizedBox(
                   width: 50,
                   child: Column(
                     children: [
@@ -474,10 +476,6 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             SnackBar(content: Text('Đã bắt đầu lại chương trình ${widget.title}')),
           );
         },
-        child: Text(
-          "Tập lại chương trình này",
-          style: TextStyle(fontSize: 16, color: Colors.white),
-        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.green,
           padding: EdgeInsets.symmetric(vertical: 15),
@@ -485,6 +483,10 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
+        ),
+        child: Text(
+          "Tập lại chương trình này",
+          style: TextStyle(fontSize: 16, color: Colors.white),
         ),
       ),
     );

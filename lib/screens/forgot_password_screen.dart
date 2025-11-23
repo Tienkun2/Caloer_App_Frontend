@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import "package:caloer_app/service/user_service.dart";
 
 class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({super.key});
+
   @override
   _ForgotPasswordScreenState createState() => _ForgotPasswordScreenState();
 }

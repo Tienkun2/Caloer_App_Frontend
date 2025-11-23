@@ -3,6 +3,8 @@ import 'package:video_player/video_player.dart';
 import 'login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
   @override
   _OnboardingScreenState createState() => _OnboardingScreenState();
 }
@@ -58,13 +60,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       MaterialPageRoute(builder: (context) => LoginScreen()),
                     );
                   },
-                  child: Icon(Icons.arrow_forward),
                   style: ElevatedButton.styleFrom(
                     shape: CircleBorder(),
                     padding: EdgeInsets.all(20),
                     backgroundColor: Colors.transparent,
                     side: BorderSide(color: Colors.white, width: 2),
                   ),
+                  child: Icon(Icons.arrow_forward),
                 ),
               ],
             ),

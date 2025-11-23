@@ -2,7 +2,7 @@ import 'package:caloer_app/screens/login_screen.dart';
 import 'package:caloer_app/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import '../service/user_service.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import '../service/google_auth_service.dart';
 import 'dart:math' as math;
 
 class OptionItem {
@@ -20,6 +20,8 @@ class OptionItem {
 }
 
 class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
+
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
 }
@@ -144,7 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   double bmr = 0, tdee = 0, bmi = 0, caloDeficit = 0, firstWeight = 0, dailyCalories = 0;
   String? createdate;
   bool isLoading = true;
-  bool _isEditingWeight = false;
+  bool _isEditingProfile = false;
   final UserService _userService = UserService();
 
   @override
@@ -441,11 +443,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (confirmLogout == true) {
       try {
         await _userService.logout();
-        final googleSignIn = GoogleSignIn();
-        if (await googleSignIn.isSignedIn()) {
-          await googleSignIn.disconnect();
-          await googleSignIn.signOut();
-        }
+        // Sử dụng GoogleAuthService thay vì tạo GoogleSignIn mới
+        final googleAuthService = GoogleAuthService();
+        await googleAuthService.signOut();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Đăng xuất thành công'), backgroundColor: Colors.green),
         );
@@ -1059,7 +1059,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       child: DropdownButtonFormField<String>(
-        value: value.isEmpty ? null : value,
+        initialValue: value.isEmpty ? null : value,
         validator: validator,
         isDense: false,
         itemHeight: null,
@@ -1288,7 +1288,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: _getPredictionColor(result['prediction']),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text("${_mapPredictionToVietnamese(result['prediction'])}", 
+                            child: Text(_mapPredictionToVietnamese(result['prediction']), 
                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
                           ),
                         ],
@@ -1485,7 +1485,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Icon(Icons.person, size: 50, color: Theme.of(context).primaryColor),
                       ),
                       SizedBox(height: 8),
-                      _buildTextField(controllers['name']!, "Tên", Icons.person, readOnly: false),
+                      _buildTextField(
+                        controllers['name']!, 
+                        "Tên", 
+                        Icons.person, 
+                        readOnly: firstWeight > 0 && !_isEditingProfile,
+                      ),
                       SizedBox(height: 4),
                       Text(
                         email.isEmpty ? "Chưa có email" : email,
@@ -1534,31 +1539,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text("Số đo cơ thể", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                          // Nút chỉnh sửa cân nặng
+                          // Nút chỉnh sửa thể trạng
                           if (firstWeight > 0)
                             TextButton.icon(
                               onPressed: () async {
-                                if (_isEditingWeight) {
-                                  // Lưu cân nặng
-                                  String weightText = controllers['weight']!.text.trim();
-                                  if (weightText.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Vui lòng nhập cân nặng'),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                    return;
-                                  }
-                                  double? weight = double.tryParse(weightText);
-                                  if (weight == null || weight <= 0) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Cân nặng phải là số dương'),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                    return;
+                                if (_isEditingProfile) {
+                                  // Validate và lưu tất cả các trường
+                                  if (!_isProfileComplete()) {
+                                    return; // _isProfileComplete đã hiển thị lỗi
                                   }
                                   
                                   setState(() {
@@ -1566,23 +1554,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   });
                                   
                                   try {
-                                    final userData = <String, dynamic>{
-                                      'weight': weight,
-                                    };
+                                    final userData = <String, dynamic>{};
+                                    
+                                    // Thu thập tất cả dữ liệu từ controllers
+                                    if (controllers['name']!.text.isNotEmpty) {
+                                      userData['name'] = controllers['name']!.text;
+                                    }
+                                    if (controllers['weight']!.text.isNotEmpty) {
+                                      userData['weight'] = double.tryParse(controllers['weight']!.text);
+                                    }
+                                    if (controllers['height']!.text.isNotEmpty) {
+                                      userData['height'] = double.tryParse(controllers['height']!.text);
+                                    }
+                                    if (controllers['age']!.text.isNotEmpty) {
+                                      userData['age'] = int.tryParse(controllers['age']!.text);
+                                    }
+                                    if (controllers['firstWeight']!.text.isNotEmpty) {
+                                      userData['firstWeight'] = double.tryParse(controllers['firstWeight']!.text);
+                                    }
+                                    if (controllers['waist']!.text.isNotEmpty) {
+                                      userData['waist'] = double.tryParse(controllers['waist']!.text);
+                                    }
+                                    if (controllers['hip']!.text.isNotEmpty) {
+                                      userData['hip'] = double.tryParse(controllers['hip']!.text);
+                                    }
+                                    if (controllers['biceps']!.text.isNotEmpty) {
+                                      userData['biceps'] = double.tryParse(controllers['biceps']!.text);
+                                    }
+                                    if (controllers['thigh']!.text.isNotEmpty) {
+                                      userData['thigh'] = double.tryParse(controllers['thigh']!.text);
+                                    }
+                                    
+                                    if (gender.isNotEmpty) {
+                                      userData['gender'] = gender == "Nữ" ? "Nu" : "Nam";
+                                    }
+                                    
+                                    userData['goal'] = {
+                                      'Duy trì cân nặng': 'MAINTAIN_WEIGHT',
+                                      'Giảm cân': 'LOSE_WEIGHT',
+                                      'Tăng cân': 'GAIN_WEIGHT'
+                                    }[goal] ?? 'MAINTAIN_WEIGHT';
+                                    
                                     bool success = await _userService.updateUserData(userData);
                                     
                                     if (success) {
                                       await _loadUserData();
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
-                                          content: Text('Cập nhật cân nặng thành công'),
+                                          content: Text('Cập nhật thể trạng thành công'),
                                           backgroundColor: Colors.green,
                                         ),
                                       );
                                     } else {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
-                                          content: Text('Cập nhật cân nặng thất bại'),
+                                          content: Text('Cập nhật thể trạng thất bại'),
                                           backgroundColor: Colors.red,
                                         ),
                                       );
@@ -1597,22 +1623,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   } finally {
                                     setState(() {
                                       isLoading = false;
-                                      _isEditingWeight = false;
+                                      _isEditingProfile = false;
                                     });
                                   }
                                 } else {
                                   setState(() {
-                                    _isEditingWeight = true;
+                                    _isEditingProfile = true;
                                   });
                                 }
                               },
                               icon: Icon(
-                                _isEditingWeight ? Icons.check : Icons.edit,
+                                _isEditingProfile ? Icons.check : Icons.edit,
                                 size: 18,
                                 color: Theme.of(context).primaryColor,
                               ),
                               label: Text(
-                                _isEditingWeight ? "Lưu" : "Chỉnh sửa cân nặng",
+                                _isEditingProfile ? "Lưu" : "Chỉnh sửa thể trạng",
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Theme.of(context).primaryColor,
@@ -1630,7 +1656,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               controllers['weight']!,
                               "Cân nặng (kg)",
                               Icons.monitor_weight,
-                              readOnly: !_isEditingWeight && controllers['weight']!.text.isNotEmpty &&
+                              readOnly: !_isEditingProfile && controllers['weight']!.text.isNotEmpty &&
                                   double.tryParse(controllers['weight']!.text) != null &&
                                   double.tryParse(controllers['weight']!.text)! > 0,
                             ),
@@ -1641,7 +1667,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               controllers['height']!,
                               "Chiều cao (cm)",
                               Icons.height,
-                              readOnly: controllers['height']!.text.isNotEmpty &&
+                              readOnly: !_isEditingProfile && controllers['height']!.text.isNotEmpty &&
                                   double.tryParse(controllers['height']!.text) != null &&
                                   double.tryParse(controllers['height']!.text)! > 0 &&
                                   double.tryParse(controllers['height']!.text)! <= 300,
@@ -1657,7 +1683,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               controllers['age']!,
                               "Tuổi",
                               Icons.calendar_today,
-                              readOnly: controllers['age']!.text.isNotEmpty &&
+                              readOnly: !_isEditingProfile && controllers['age']!.text.isNotEmpty &&
                                   int.tryParse(controllers['age']!.text) != null &&
                                   int.tryParse(controllers['age']!.text)! > 0 &&
                                   int.tryParse(controllers['age']!.text)! <= 150,
@@ -1669,9 +1695,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               controllers['firstWeight']!,
                               "Cân nặng ban đầu (kg)",
                               Icons.monitor_weight,
-                              readOnly: controllers['firstWeight']!.text.isNotEmpty &&
+                              readOnly: !_isEditingProfile && controllers['firstWeight']!.text.isNotEmpty &&
                                   double.tryParse(controllers['firstWeight']!.text) != null &&
                                   double.tryParse(controllers['firstWeight']!.text)! > 0,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      // Thêm các trường số đo cơ thể
+                      Text("Số đo chi tiết", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
+                      SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              controllers['waist']!,
+                              "Vòng eo (cm)",
+                              Icons.straighten,
+                              readOnly: !_isEditingProfile && controllers['waist']!.text.isNotEmpty &&
+                                  double.tryParse(controllers['waist']!.text) != null &&
+                                  double.tryParse(controllers['waist']!.text)! > 0,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: _buildTextField(
+                              controllers['hip']!,
+                              "Vòng mông (cm)",
+                              Icons.straighten,
+                              readOnly: !_isEditingProfile && controllers['hip']!.text.isNotEmpty &&
+                                  double.tryParse(controllers['hip']!.text) != null &&
+                                  double.tryParse(controllers['hip']!.text)! > 0,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              controllers['biceps']!,
+                              "Vòng tay (cm)",
+                              Icons.straighten,
+                              readOnly: !_isEditingProfile && controllers['biceps']!.text.isNotEmpty &&
+                                  double.tryParse(controllers['biceps']!.text) != null &&
+                                  double.tryParse(controllers['biceps']!.text)! > 0,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: _buildTextField(
+                              controllers['thigh']!,
+                              "Vòng đùi (cm)",
+                              Icons.straighten,
+                              readOnly: !_isEditingProfile && controllers['thigh']!.text.isNotEmpty &&
+                                  double.tryParse(controllers['thigh']!.text) != null &&
+                                  double.tryParse(controllers['thigh']!.text)! > 0,
                             ),
                           ),
                         ],
@@ -1685,36 +1766,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         bottomNavigationBar: firstWeight > 0
-            ? null // Ẩn bottom bar khi đã cập nhật cân nặng lần đầu (đã có nút chỉnh sửa ở trên)
+            ? null // Đã có cân nặng ban đầu, sử dụng nút chỉnh sửa ở trên
             : Padding(
                 padding: EdgeInsets.all(16),
-                child: Row(
-                  // Hiển thị cả 2 nút khi chưa có firstWeight
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _updateProfileData,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          padding: EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: Text("Cập nhật", style: TextStyle(fontSize: 16, color: Colors.white)),
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _handleUpdateWeightLostDaily,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade700,
-                          padding: EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: Text("Cập nhật cân nặng", style: TextStyle(fontSize: 16, color: Colors.white)),
-                      ),
-                    ),
-                  ],
+                child: ElevatedButton(
+                  onPressed: _updateProfileData,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: Text("Lưu hồ sơ thể trạng", style: TextStyle(fontSize: 16, color: Colors.white)),
                 ),
               ),
       ),
@@ -1751,19 +1813,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildGenderOption(String value, IconData icon) {
     bool isSelected = gender == value;
     return GestureDetector(
-      onTap: () => setState(() => gender = value),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey.shade600),
-            SizedBox(width: 4),
-            Text(value, style: TextStyle(color: isSelected ? Colors.white : Colors.grey.shade600, fontSize: 14)),
-          ],
+      onTap: _isEditingProfile ? () => setState(() => gender = value) : null,
+      child: Opacity(
+        opacity: _isEditingProfile ? 1.0 : 0.6,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? Theme.of(context).primaryColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey.shade600),
+              SizedBox(width: 4),
+              Text(value, style: TextStyle(color: isSelected ? Colors.white : Colors.grey.shade600, fontSize: 14)),
+            ],
+          ),
         ),
       ),
     );
@@ -1779,7 +1844,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isExpanded: true,
         underline: SizedBox(),
         icon: Icon(Icons.arrow_drop_down, color: Theme.of(context).primaryColor),
-        onChanged: (value) => setState(() => goal = value!),
+        onChanged: _isEditingProfile ? (value) => setState(() => goal = value!) : null,
         items: goals.map((value) => DropdownMenuItem(
           value: value,
           child: Row(

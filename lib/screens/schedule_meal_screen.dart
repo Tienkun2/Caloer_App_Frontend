@@ -8,7 +8,7 @@ class ScheduleMealsScreen extends StatefulWidget {
   final String mealType;
   final DateTime selectedDate;
 
-  ScheduleMealsScreen({required this.mealType, required this.selectedDate});
+  const ScheduleMealsScreen({super.key, required this.mealType, required this.selectedDate});
 
   @override
   _ScheduleMealsScreenState createState() => _ScheduleMealsScreenState();
@@ -312,7 +312,7 @@ class _ScheduleMealsScreenState extends State<ScheduleMealsScreen> {
             ),
 
             // Tab bar
-            Container(
+            SizedBox(
               height: 40,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,

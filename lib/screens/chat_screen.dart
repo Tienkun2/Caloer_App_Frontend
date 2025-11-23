@@ -4,6 +4,8 @@ import 'package:caloer_app/service/chat_gemini_service.dart';
 import 'package:caloer_app/screens/home_screen.dart';
 
 class ChatScreen extends StatefulWidget {
+  const ChatScreen({super.key});
+
   @override
   _ChatScreenState createState() => _ChatScreenState();
 }
@@ -360,10 +362,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   Widget _buildSuggestionChips() {
     List<String> suggestions = [
-      "Cho tôi thực đơn cho người gầy",
-      "Thực đơn giảm cân trong 1 tuần",
-      "Chế độ ăn cho người tập gym",
-      "Thực đơn tăng cơ bắp",
+      "menu cho người bị huyết áp cao và béo phì",
+      "thực đơn chay cho người bị mỡ máu",
+      "thực đơn cho người bị béo phì muốn giảm chất béo xấu",
+      "thực đơn cho người suy dinh dưỡng muốn tăng cân",
     ];
 
     return Wrap(
@@ -772,7 +774,7 @@ class ChatMessage extends StatelessWidget {
   final String text;
   final bool isUser;
 
-  ChatMessage({
+  const ChatMessage({super.key, 
     required this.text,
     required this.isUser,
   });

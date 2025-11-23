@@ -5,6 +5,8 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 class H20Screen extends StatefulWidget {
+  const H20Screen({super.key});
+
   @override
   _H20ScreenState createState() => _H20ScreenState();
 }
@@ -209,7 +211,7 @@ class _H20ScreenState extends State<H20Screen> {
                 Switch(
                   value: isReminderOn,
                   onChanged: toggleReminder,
-                  activeColor: Colors.green,
+                  activeThumbColor: Colors.green,
                 ),
               ],
             ),

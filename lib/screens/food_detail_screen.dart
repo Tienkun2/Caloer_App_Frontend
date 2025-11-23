@@ -9,7 +9,7 @@ class FoodDetailScreen extends StatefulWidget {
   final String mealType;
   final Map<String, dynamic>? foodData; // Thêm field để truyền data từ predict
 
-  FoodDetailScreen({
+  const FoodDetailScreen({super.key, 
     required this.foodId,
     required this.selectedDate,
     required this.mealType,
@@ -390,7 +390,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                                 SizedBox(height: 16),
 
                                 // Add button
-                                Container(
+                                SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton.icon(
                                     icon: Icon(Icons.add_circle_outline, color: Colors.white),

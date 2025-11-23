@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class CanNangScreen extends StatefulWidget {
+  const CanNangScreen({super.key});
+
   @override
   _CanNangScreenState createState() => _CanNangScreenState();
 }
@@ -44,8 +46,8 @@ class _CanNangScreenState extends State<CanNangScreen> {
   }
 
   void _editWeight(String type) {
-    TextEditingController _controller = TextEditingController();
-    _controller.text = (type == "initial"
+    TextEditingController controller = TextEditingController();
+    controller.text = (type == "initial"
         ? initialWeight
         : type == "current"
         ? currentWeight
@@ -59,7 +61,7 @@ class _CanNangScreenState extends State<CanNangScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           title: Text("Cập nhật cân nặng", style: TextStyle(fontWeight: FontWeight.bold)),
           content: TextField(
-            controller: _controller,
+            controller: controller,
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
               hintText: "Nhập cân nặng",
@@ -74,7 +76,7 @@ class _CanNangScreenState extends State<CanNangScreen> {
             ElevatedButton(
               onPressed: () {
                 setState(() {
-                  double newWeight = double.tryParse(_controller.text) ?? 0;
+                  double newWeight = double.tryParse(controller.text) ?? 0;
                   if (newWeight > 0) {
                     if (type == "initial") {
                       initialWeight = newWeight;

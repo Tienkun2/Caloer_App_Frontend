@@ -4,6 +4,8 @@ import 'package:caloer_app/screens/home_screen.dart';
 import 'package:caloer_app/screens/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
   _SplashScreenState createState() => _SplashScreenState();
 }

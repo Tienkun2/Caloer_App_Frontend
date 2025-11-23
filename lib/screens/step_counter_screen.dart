@@ -6,6 +6,8 @@ import '../service/step_service.dart';
 import 'package:intl/intl.dart';
 
 class StepCounterScreen extends StatefulWidget {
+  const StepCounterScreen({super.key});
+
   @override
   _StepCounterScreenState createState() => _StepCounterScreenState();
 }
@@ -18,7 +20,7 @@ class _StepCounterScreenState extends State<StepCounterScreen> {
   double _calories = 0.0;
   bool _isLoading = true;
   double _weight = 70.0; // Giả sử mặc định, lấy từ UserService nếu cần
-  double _strideLength = 78.0; // cm, nam
+  final double _strideLength = 78.0; // cm, nam
 
   @override
   void initState() {

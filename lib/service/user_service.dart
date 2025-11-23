@@ -132,7 +132,7 @@ class UserService {
     } catch (e) {
       print("⚠️ Lỗi kết nối API: $e");
       if (e is http.ClientException || e is http.Response) {
-        throw e; // Ném lại để UI xử lý
+        rethrow; // Ném lại để UI xử lý
       }
       return false;
     }

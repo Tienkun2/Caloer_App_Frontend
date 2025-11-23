@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -508,6 +510,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 }
 
 class LoadingIndicator extends StatelessWidget {
+  const LoadingIndicator({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(

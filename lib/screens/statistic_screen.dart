@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:animate_do/animate_do.dart';
 import '../service/weight_lost_service.dart';
 
 class StatisticsScreen extends StatefulWidget {

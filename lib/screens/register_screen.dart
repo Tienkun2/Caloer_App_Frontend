@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import "package:caloer_app/service/user_service.dart"; // Đảm bảo đường dẫn import chính xác
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }

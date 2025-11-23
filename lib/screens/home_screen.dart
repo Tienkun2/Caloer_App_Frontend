@@ -13,7 +13,6 @@ import 'chat_screen.dart';
 import 'package:caloer_app/service/SplashScreen.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -37,6 +36,8 @@ void main() {
 }
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -48,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
-  CalendarFormat _calendarFormat = CalendarFormat.week;
+  final CalendarFormat _calendarFormat = CalendarFormat.week;
   int _selectedIndex = 0;
 
   // Placeholder data
@@ -117,6 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
               protein: baseProtein * ratio,
               fat: baseFat * ratio,
               servingSize: '${weightInGrams}g',
+              imageUrl: food['imageUrl'] ?? food['image_url'], // Lấy imageUrl từ food
             ));
           }
         }
@@ -257,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Text('Gợi ý bữa ăn'),
             ],
           ),
-          content: Container(
+          content: SizedBox(
             width: double.maxFinite,
             height: 400,
             child: DefaultTabController(
@@ -395,9 +397,9 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         _fetchMealLogs();
         print("🔍 FoodHistory sau khi thêm:");
-        _foodHistory.forEach((item) {
+        for (var item in _foodHistory) {
           print("✅ FoodHistoryItem: ${item.name}, Food ID: ${item.foodId}, Meal Type: ${item.mealType}");
-        });
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -665,18 +667,71 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: EdgeInsets.all(12),
         child: Row(
           children: [
+            // Hiển thị hình ảnh hoặc icon
             Container(
-              padding: EdgeInsets.all(6),
-              decoration: BoxDecoration(color: mealColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-              child: Icon(
-                {
-                  'Bữa sáng': Icons.breakfast_dining,
-                  'Bữa trưa': Icons.lunch_dining,
-                  'Bữa tối': Icons.dinner_dining,
-                  'Bữa phụ': Icons.fastfood,
-                }[item.mealType] ?? Icons.fastfood,
-                color: mealColor,
-                size: 20,
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: mealColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: (item.imageUrl != null && item.imageUrl!.isNotEmpty)
+                    ? Image.network(
+                        item.imageUrl!,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          // Fallback về icon nếu lỗi load ảnh
+                          return Container(
+                            padding: EdgeInsets.all(6),
+                            decoration: BoxDecoration(color: mealColor.withOpacity(0.1)),
+                            child: Icon(
+                              {
+                                'Bữa sáng': Icons.breakfast_dining,
+                                'Bữa trưa': Icons.lunch_dining,
+                                'Bữa tối': Icons.dinner_dining,
+                                'Bữa phụ': Icons.fastfood,
+                              }[item.mealType] ?? Icons.fastfood,
+                              color: mealColor,
+                              size: 20,
+                            ),
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            padding: EdgeInsets.all(6),
+                            decoration: BoxDecoration(color: mealColor.withOpacity(0.1)),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(mealColor),
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : Container(
+                        padding: EdgeInsets.all(6),
+                        decoration: BoxDecoration(color: mealColor.withOpacity(0.1)),
+                        child: Icon(
+                          {
+                            'Bữa sáng': Icons.breakfast_dining,
+                            'Bữa trưa': Icons.lunch_dining,
+                            'Bữa tối': Icons.dinner_dining,
+                            'Bữa phụ': Icons.fastfood,
+                          }[item.mealType] ?? Icons.fastfood,
+                          color: mealColor,
+                          size: 20,
+                        ),
+                      ),
               ),
             ),
             SizedBox(width: 12),
@@ -865,6 +920,7 @@ class _HomeScreenState extends State<HomeScreen> {
             protein: item.protein * ratio,
             fat: item.fat * ratio,
             servingSize: '${newWeight.toStringAsFixed(0)}g',
+            imageUrl: item.imageUrl, // Giữ lại imageUrl
           );
           _isLoading = false;
         });
@@ -897,6 +953,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class FoodHistoryItem {
   final String id, foodId, name, mealType, servingSize;
+  final String? imageUrl;
   final double calories, carbs, protein, fat;
 
   FoodHistoryItem({
@@ -909,5 +966,6 @@ class FoodHistoryItem {
     required this.protein,
     required this.fat,
     required this.servingSize,
+    this.imageUrl,
   });
 }

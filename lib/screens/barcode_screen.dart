@@ -8,7 +8,7 @@ class BarcodeScreen extends StatefulWidget {
   final String mealType;
   final DateTime selectedDate;
 
-  BarcodeScreen({required this.mealType, required this.selectedDate});
+  const BarcodeScreen({super.key, required this.mealType, required this.selectedDate});
 
   @override
   _BarcodeScreenState createState() => _BarcodeScreenState();
