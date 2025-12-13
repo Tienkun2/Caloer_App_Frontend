@@ -76,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final List<OptionItem> _alcoholOptions = const [
     OptionItem(label: "Không uống", value: "no", description: "Không sử dụng đồ uống có cồn"),
     OptionItem(label: "Thỉnh thoảng", value: "Sometimes", description: "Uống trong những dịp nhất định"),
-    OptionItem(label: "Thường xuyên", value: "Frequently", description: "Uống nhiều lần trong tuần"),
+    OptionItem(label: "Thường xuyên", value: "Frequently", apiValue: "Sometimes", description: "Uống nhiều lần trong tuần (API chỉ nhận 'Always', 'Sometimes' hoặc 'no')"),
     OptionItem(label: "Rất thường xuyên", value: "Always", description: "Sử dụng gần như mỗi ngày"),
   ];
 

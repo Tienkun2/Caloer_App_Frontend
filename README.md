@@ -42,7 +42,11 @@ flutter run
 
 ### Chạy trên thiết bị cụ thể:
 ```bash
-flutter run -d <device-id>
+C:\Android\platform-tools\adb.exe pair 172.16.1.11:37831 777566
+C:\Android\platform-tools\adb.exe connect 172.16.1.11:38203
+C:\Android\platform-tools\adb.exe devices
+flutter devices
+flutter run -d 172.16.1.11:38203
 ```
 
 ### Chạy trên web:

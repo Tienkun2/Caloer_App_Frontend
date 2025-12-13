@@ -270,6 +270,8 @@ class FoodService {
         "imageUrl": foodData["image_url"] ?? foodData["imageUrl"], // Lưu imageUrl
       };
 
+      final String foodName = requestData["name"] as String;
+
       print("🟡 Lưu món ăn vào DB: ${jsonEncode(requestData)}");
 
       final response = await http.post(
@@ -285,6 +287,36 @@ class FoodService {
         final data = jsonDecode(response.body);
         print("✅ Đã lưu món ăn vào DB: ${data["result"]?["id"]}");
         return data["result"] ?? data;
+      } else if (response.statusCode == 400) {
+        // Kiểm tra xem có phải lỗi "món ăn đã tồn tại" không
+        try {
+          final errorData = jsonDecode(response.body);
+          final errorCode = errorData["code"];
+          
+          if (errorCode == 1039) {
+            // Món ăn đã tồn tại, tìm kiếm món ăn hiện có
+            print("🟡 Món ăn đã tồn tại trong DB, đang tìm kiếm...");
+            final List<Map<String, dynamic>> searchResults = await searchFoods(foodName);
+            
+            // Tìm món ăn khớp chính xác (case-insensitive)
+            final existingFood = searchResults.firstWhere(
+              (food) => (food["name"] as String?)?.toLowerCase() == foodName.toLowerCase(),
+              orElse: () => searchResults.isNotEmpty ? searchResults.first : {},
+            );
+            
+            if (existingFood.isNotEmpty && existingFood["id"] != null) {
+              print("✅ Đã tìm thấy món ăn hiện có với ID: ${existingFood["id"]}");
+              return existingFood;
+            } else {
+              throw Exception("Không tìm thấy món ăn trong database");
+            }
+          } else {
+            throw Exception("Lỗi HTTP ${response.statusCode}: ${response.body}");
+          }
+        } catch (parseError) {
+          // Nếu không parse được JSON hoặc không phải code 1039, throw lỗi gốc
+          throw Exception("Lỗi HTTP ${response.statusCode}: ${response.body}");
+        }
       } else {
         throw Exception("Lỗi HTTP ${response.statusCode}: ${response.body}");
       }
